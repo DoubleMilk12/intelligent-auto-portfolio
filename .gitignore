@@ -139,6 +139,7 @@ dist
 qa/
 qa-*
 design-qa*
+tmp/
 
 # Local Codex workspace metadata
 .openai/

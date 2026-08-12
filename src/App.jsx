@@ -41,7 +41,7 @@ import {
   WarningOctagon,
   X,
 } from "@phosphor-icons/react";
-import { acceptanceRows, adasRows, appendix, chapterGroups, checks, cockpitRows, competitorRows, designImplications, driverStates, escalationRows, eventFields, gazeZones, hmiStates, monitoringRows, qualityRules, remotePermissions, scenarios, startupFaults, systemLayers, ttsRows, vehicles } from "./data";
+import { acceptanceRows, adasRows, appendix, chapterGroups, checks, cockpitRows, competitorRows, degradationCases, designImplications, driverStates, escalationRows, eventFields, gazeZones, hmiStates, monitoringRows, qualityRules, remotePermissions, scenarios, startupFaults, systemLayers, ttsRows, vehicles } from "./data";
 
 const ease = [0.22, 1, 0.36, 1];
 gsap.registerPlugin(ScrollTrigger);
@@ -96,6 +96,7 @@ const scenarioSceneMeta = {
 
 const roadTypeIconList = [RoadHorizon, Buildings, Tree];
 const systemLayerIconList = [Scan, NavigationArrow, Cpu, ChatsCircle];
+const degradationIconList = [CameraSlash, EyeSlash, Broadcast, Cpu];
 
 function scrollToId(id) {
   const target = document.getElementById(id);
@@ -292,9 +293,9 @@ function Header({ progress, view, onNavigate }) {
         {mobileOpen && (
           <motion.nav className="mobile-menu" aria-label="移动端导航" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             {(view === "benchmark"
-              ? [["home", "首页"], ["benchmark", "对标总览"], ["dms", "DMS PRD"], ["vehicle-detail", "单车型详情"], ["comparison", "横向对比"], ["sources", "资料来源"]]
+              ? [["home", "首页"], ["benchmark", "对标总览"], ["dms", "DMS PRD"], ["vehicle-detail", "单车型详情"], ["comparison", "横向对比"], ["conclusion", "综合结论"]]
               : view === "dms"
-                ? [["home", "首页"], ["benchmark", "六车型对标"], ["dms", "PRD 总览"], ["dms-monitoring", "持续监测"], ["dms-timeline", "交互时间轴"], ["dms-appendix", "测试与附录"]]
+                ? [["home", "首页"], ["benchmark", "六车型对标"], ["dms", "PRD 总览"], ["dms-degradation", "异常边界"], ["dms-monitoring", "持续监测"], ["dms-timeline", "交互时间轴"], ["dms-appendix", "测试与附录"]]
                 : [["home", "首页"], ["benchmark", "六车型对标"], ["dms", "DMS PRD"]]
             ).map(([id, label]) => (
               <button key={id} onClick={() => go(id)}>{label}<ArrowRight /></button>
@@ -452,24 +453,44 @@ function Benchmark() {
     const ctx = gsap.context(() => {
       const car = carAssetRef.current;
       const steps = gsap.utils.toArray(".motion-step, .car-motion-anchor", storyRef.current);
-      gsap.set(car, { x: reduced ? 0 : "18vw", rotate: 0, scale: reduced ? 1 : 0.72, transformOrigin: "50% 60%" });
+      const comparisonBoundary = document.querySelector("#comparison");
+      gsap.set(car, { xPercent: 0, y: 0, rotate: 0, scale: reduced ? 1 : 0.72, transformOrigin: "50% 60%" });
       if (reduced || window.innerWidth <= 640) return;
 
       gsap.fromTo(car, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.9, ease: "power3.out" });
       steps.forEach((step) => {
         const baseX = Number.parseFloat(step.dataset.carX);
-        const targetScale = Number(step.dataset.carScale || 0.84);
-        const targetY = step.dataset.carY || 0;
-        const mediumOffset = targetScale >= 0.95 ? 27 : 24;
-        const targetX = window.innerWidth <= 960 ? `${Math.sign(baseX || 1) * mediumOffset}vw` : step.dataset.carX;
+        const targetScale = Math.min(Math.max(Number(step.dataset.carScale || 0.78), 0.54), 1.02);
+        const targetY = 0;
+        const targetShift = Math.sign(baseX || 1) * (window.innerWidth <= 960 ? 2 : 4);
+        const shouldHide = step.classList.contains("full-width-step");
+        const moveCar = () => gsap.to(car, {
+          autoAlpha: shouldHide ? 0 : 1,
+          xPercent: targetShift,
+          y: targetY,
+          scale: targetScale,
+          rotate: Number(step.dataset.carRotate || 0),
+          duration: 0.95,
+          ease: "power3.out",
+          overwrite: "auto",
+        });
         ScrollTrigger.create({
           trigger: step,
           start: "top 58%",
           end: "bottom 42%",
-          onEnter: () => gsap.to(car, { x: targetX, y: targetY, scale: targetScale, rotate: Number(step.dataset.carRotate || 0), duration: 1.15, ease: "power3.out", overwrite: "auto" }),
-          onEnterBack: () => gsap.to(car, { x: targetX, y: targetY, scale: targetScale, rotate: Number(step.dataset.carRotate || 0), duration: 1.15, ease: "power3.out", overwrite: "auto" }),
+          onEnter: moveCar,
+          onEnterBack: moveCar,
         });
       });
+
+      if (comparisonBoundary) {
+        ScrollTrigger.create({
+          trigger: comparisonBoundary,
+          start: "top bottom",
+          onEnter: () => gsap.to(car, { autoAlpha: 0, duration: 0.35, overwrite: "auto" }),
+          onLeaveBack: () => gsap.to(car, { autoAlpha: 1, duration: 0.35, overwrite: "auto" }),
+        });
+      }
 
       const mediaImage = storyRef.current.querySelector(".compute-media-visual img");
       if (mediaImage) {
@@ -537,7 +558,7 @@ function Benchmark() {
         <div className="cover-copy shell">
           <p className="eyebrow light">MODULE 01 / BENCHMARK</p>
           <h2>六车型辅助驾驶<br />与智能座舱对标</h2>
-          <p>从产品定位到技术路线，让六种旗舰思路在同一坐标系中被看见。</p>
+          <p>以统一维度比较六款车型的座舱体验、辅助驾驶、感知方案与计算平台。</p>
         </div>
       </div>
 
@@ -589,7 +610,7 @@ function Benchmark() {
             </Reveal>
 
             <div className="vehicle-domain cockpit-domain">
-              <Reveal className="domain-heading car-motion-anchor" data-car-x="27vw" data-car-y="-18vh" data-car-scale="0.54" data-car-rotate="-.4">
+              <Reveal className="domain-heading car-motion-anchor" data-car-x="27vw" data-car-y="-18vh" data-car-scale="0.72" data-car-rotate="-.4">
                 <span className="domain-icon"><ChatsCircle size={26} weight="duotone" /></span>
                 <div><p>CHAPTER A / SMART COCKPIT</p><h3>智能座舱</h3></div>
                 <small>显示、语音、生态与乘员场景</small>
@@ -602,40 +623,54 @@ function Benchmark() {
                   <span>02 / 智能座舱体验</span>
                   <h3>{current.cockpitHeadline}</h3>
                   <p>{current.cockpitText}</p>
-                  <ul className="editorial-points">{current.cockpitHighlights.map((item) => <li key={item}>{item}</li>)}</ul>
+                  <div className="cockpit-detail-grid">
+                    {current.cockpitDetails.map((item, index) => (
+                      <article key={item.title}>
+                        <span>{String(index + 1).padStart(2, "0")}</span>
+                        <h4>{item.title}</h4>
+                        <p>{item.text}</p>
+                      </article>
+                    ))}
+                  </div>
                 </div>
               </Reveal>
             </div>
 
             <div className="vehicle-domain adas-domain">
-              <Reveal className="domain-heading car-motion-anchor" data-car-x="27vw" data-car-y="-18vh" data-car-scale="0.54" data-car-rotate="-.4">
+              <Reveal className="domain-heading car-motion-anchor" data-car-x="27vw" data-car-y="-18vh" data-car-scale="0.72" data-car-rotate="-.4">
                 <span className="domain-icon"><Scan size={26} weight="duotone" /></span>
                 <div><p>CHAPTER B / ASSISTED DRIVING</p><h3>辅助驾驶</h3></div>
                 <small>功能、安全、感知、计算与技术路线</small>
               </Reveal>
 
-              <Reveal className="narrative-card adas-overview-card motion-step step-right" data-car-x="-25vw" data-car-y="0" data-car-scale="0.78" data-car-rotate=".8">
+              <Reveal className="narrative-card adas-overview-card motion-step step-right" data-car-x="-25vw" data-car-y="0" data-car-scale="0.92" data-car-rotate=".8">
                 <span>03 / 功能与安全</span>
                 <h3>功能覆盖与驾驶责任</h3>
                 <p>{current.adas}</p>
                 <ul className="editorial-points">{current.adasFunctions.map((item) => <li key={item}>{item}</li>)}</ul>
               </Reveal>
 
-              <Reveal className="tech-evidence-card drive-evidence-card motion-step step-left" data-car-x="25vw" data-car-y="0" data-car-scale="0.84" data-car-rotate="-.7">
-                <OfficialDriveMedia media={current.driveMedia} vehicleName={current.name} />
-                <div className="tech-evidence-copy">
+              <Reveal className="drive-evidence-card motion-step full-width-step" data-car-x="25vw" data-car-y="0" data-car-scale="0.84" data-car-rotate="-.7">
+                <div className="media-band-head">
                   <span>04 / 辅助驾驶实车表现</span>
-                  <h3>把技术路线放回真实道路观察</h3>
-                  <p>视频用于观察环境理解、轨迹规划、速度控制和人机监督如何连续工作；单次演示不替代版本、区域与道路条件说明。</p>
+                  <div>
+                    <h3>实车演示：感知、规划与控制如何连续衔接</h3>
+                    <p>结合公开道路演示观察目标识别、轨迹选择、速度控制和驾驶员监督。演示用于说明系统工作方式，实际能力仍受软件版本、开放区域和道路条件限制。</p>
+                  </div>
                   <div className="spec-row">{current.adasFunctions.map((item) => <b key={item}>{item}</b>)}</div>
                 </div>
+                <OfficialDriveMedia media={current.driveMedia} vehicleName={current.name} />
               </Reveal>
 
-              <Reveal className="perception-panel motion-step step-right" data-car-x="-25vw" data-car-y="0" data-car-scale="0.82" data-car-rotate=".7">
-                <ZoomableImage src={current.sensors} alt={`${current.name} 感知硬件示意`} />
+              <Reveal className="perception-panel motion-step full-width-step" data-car-x="-25vw" data-car-y="0" data-car-scale="0.82" data-car-rotate=".7">
+                <div className={`perception-visual ${current.sensorViews ? "is-stacked" : ""}`}>
+                  {(current.sensorViews ?? [current.sensors]).map((src, index) => (
+                    <ZoomableImage key={src} src={src} alt={`${current.name} 感知硬件示意${current.sensorViews ? ` ${index + 1}` : ""}`} />
+                  ))}
+                </div>
                 <div className="perception-copy">
                   <span>05 / 感知硬件</span>
-                  <h3>车辆如何观察道路与驾驶员</h3>
+                  <h3>感知硬件配置与覆盖范围</h3>
                   <p>{current.perceptionSummary}</p>
                 </div>
                 <div className="native-table-wrap">
@@ -647,19 +682,28 @@ function Benchmark() {
                 </div>
               </Reveal>
 
-              <Reveal className="tech-evidence-card computing-focus motion-step step-left" data-car-x="25vw" data-car-y="0" data-car-scale="0.88" data-car-rotate="-.7">
-                <TechHardwareMedia media={current.computeMedia} />
+              <Reveal className="tech-evidence-card computing-focus motion-step full-width-step" data-car-x="25vw" data-car-y="0" data-car-scale="0.88" data-car-rotate="-.7">
                 <div className="tech-evidence-copy">
                   <span>06 / 计算与软件</span>
-                  <h3>计算平台与模型能力</h3>
+                  <h3>计算平台</h3>
                   <p>{current.platform}</p>
-                  <div className="spec-row">{current.specs.map((spec) => <b key={spec}>{spec}</b>)}</div>
+                  <div className="compute-detail-grid">
+                    {current.computeDetails.map((item) => (
+                      <article key={item.title}>
+                        <span>{item.label}</span>
+                        <h4>{item.title}</h4>
+                        <p>{item.text}</p>
+                      </article>
+                    ))}
+                  </div>
+                  <div className="spec-row">{current.computeSpecs.map((spec) => <b key={spec}>{spec}</b>)}</div>
                 </div>
+                <TechHardwareMedia media={current.computeMedia} />
               </Reveal>
 
               <Reveal className="narrative-card tech-focus-card route-focus motion-step step-right" data-car-x="-25vw" data-car-y="0" data-car-scale="0.98" data-car-rotate="1">
-                <span>07 / 技术路线与成立条件</span>
-                <h3>路线优势必须由工程条件支撑</h3>
+                <span>07 / 技术路线与安全边界</span>
+                <h3>技术路线</h3>
                 <p>{current.routeCondition}</p>
               </Reveal>
             </div>
@@ -677,7 +721,7 @@ function Benchmark() {
         <div className="shell">
           <Reveal className="section-heading split-heading">
             <div><p className="eyebrow">CROSS-CAR COMPARISON</p><h2>把差异放进<br />同一张表。</h2></div>
-            <p>智能座舱和辅助驾驶分别比较，避免把不同维度压缩到一张过度简化的总表中。移动端可横向滚动查看。</p>
+            <p>六款车型围绕座舱显示、语音与生态，以及辅助驾驶感知、计算、模型、功能覆盖和安全要求进行横向对照。</p>
           </Reveal>
           <div className="comparison-switch" role="tablist" aria-label="选择横向对比类型">
             <button role="tab" aria-selected={comparisonMode === "cockpit"} className={comparisonMode === "cockpit" ? "active" : ""} onClick={() => setComparisonMode("cockpit")}>智能座舱横向对比</button>
@@ -703,7 +747,7 @@ function Benchmark() {
         <Reveal className="design-implication-heading">
           <p className="eyebrow">PRODUCT DESIGN IMPLICATIONS</p>
           <h3>从车型差异提炼产品设计启示</h3>
-          <p>以下结论对应原文的产品设计启示：先确定用户任务和能力边界，再决定界面、硬件与技术路线如何组合。</p>
+          <p>产品定义从用户任务和能力边界出发，进一步确定界面、硬件与技术路线的组合方式。</p>
         </Reveal>
         <div className="design-implication-grid">
           <Reveal className="implication-column cockpit-implication">
@@ -717,19 +761,6 @@ function Benchmark() {
         </div>
       </div>
 
-      <div id="sources" className="sources-section section-space">
-        <div className="shell sources-grid">
-          <Reveal><p className="eyebrow light">SOURCE / METHOD</p><h2>资料来源与<br />阅读边界。</h2></Reveal>
-          <Reveal>
-            <p>车型参数、技术路线与功能判断以用户提供的《六车型辅助驾驶与智能座舱对标分析》为主。新增芯片硬件图与道路演示仅用于帮助理解，并在卡片中单独标明公开来源；未公开的交付芯片、能力或阈值不作推断。</p>
-            <ul>
-              <li>计算平台统一展示芯片或域控制器硬件，演示视频统一放在辅助驾驶章节。</li>
-              <li>横向对比按智能座舱与辅助驾驶拆分，降低维度混淆。</li>
-              <li>原文存在口径差异时，以单车型详细章节为主要呈现依据。</li>
-            </ul>
-          </Reveal>
-        </div>
-      </div>
     </section>
   );
 }
@@ -934,6 +965,7 @@ function Accordion({ item, open, onToggle }) {
 function DmsModule() {
   const [openIndex, setOpenIndex] = useState(0);
   const [activeOverview, setActiveOverview] = useState("check");
+  const [activeDegradation, setActiveDegradation] = useState(0);
   const overviewGroups = [
     {
       code: "01 / 识别与判定",
@@ -951,6 +983,13 @@ function DmsModule() {
         { key: "remind", index: "04", title: "分级提醒", summary: "按风险进入一级、二级与三级告警。", details: ["HOR、EOR 与组合提醒避免重复播报", "颜色、提示音、TTS 与触觉同步升级"], owners: ["DMS", "HMI", "VEH", "AD"], image: "/assets/dms/overview/04-remind.png", target: "dms-hmi", Icon: SpeakerHigh },
         { key: "vehicle", index: "05", title: "车辆处置", summary: "DCA 过渡至 RMF，车辆稳定减速并寻找安全位置。", details: ["AD 规划停车轨迹，整车执行转向与制动", "无安全区域或系统失效时受控车道内停车"], owners: ["AD", "VEH", "HMI", "DMS"], image: "/assets/dms/overview/05-vehicle.png", target: "dms-rmf", Icon: Car },
         { key: "rescue", index: "06", title: "远程救援", summary: "SOS 与车端 RMF 从同一事件并行启动。", details: ["上传最小必要状态并连接远程坐席", "连接失败保持重试，不中断车端停车"], owners: ["SOS", "HMI", "AD", "VEH"], image: "/assets/dms/overview/06-rescue.png", target: "dms-rmf", Icon: PhoneCall },
+      ],
+    },
+    {
+      code: "03 / 异常边界",
+      title: "监测失效时，先退化、再限制，最后验证恢复。",
+      modules: [
+        { key: "degrade", index: "07", title: "异常边界", summary: "按故障原因切换替代信号、辅助驾驶限制与恢复验证。", details: ["方向盘触控只能证明手部接触", "DMS 超时不可继续输出正常状态"], owners: ["DMS", "AD", "HMI", "VEH"], target: "dms-degradation", Icon: CameraSlash },
       ],
     },
   ];
@@ -971,7 +1010,7 @@ function DmsModule() {
           </div>
           <motion.div className="dms-overview-map" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease }}>
             <div className="dms-overview-head">
-              <div><span>PRD OVERVIEW / SIX MODULES</span><h3>全流程概览</h3></div>
+              <div><span>PRD OVERVIEW / SEVEN MODULES</span><h3>全流程概览</h3></div>
               <p>系统从启动条件确认开始，持续识别驾驶员状态；异常升级后，由车端完成最小风险处置，并同步连接远程救援。</p>
             </div>
             <div className="dms-process-flow" aria-label="DMS 主流程图">
@@ -980,16 +1019,17 @@ function DmsModule() {
               </div>
               <div className="dms-flow-split"><ArrowDown size={17} /><span>持续无响应后并行启动两条安全链路</span></div>
               <div className="dms-flow-branches" role="list" aria-label="车端处置与远程救援并行链路">
-                {overviewModules.slice(4).map(({ key, index, title, summary, Icon }) => <div className={`dms-flow-branch branch-${key}`} role="listitem" key={key}><span className="dms-flow-icon"><Icon size={24} weight="duotone" /></span><span><b>{index}</b><strong>{title}</strong><small>{summary}</small></span></div>)}
+                {overviewModules.slice(4, 6).map(({ key, index, title, summary, Icon }) => <div className={`dms-flow-branch branch-${key}`} role="listitem" key={key}><span className="dms-flow-icon"><Icon size={24} weight="duotone" /></span><span><b>{index}</b><strong>{title}</strong><small>{summary}</small></span></div>)}
               </div>
+              <div className="dms-flow-boundary"><CameraSlash size={20} weight="duotone" /><span><b>07 / 异常边界</b><small>检查或监测阶段发现不可用</small></span><ArrowRight size={17} /><strong>替代监测</strong><ArrowRight size={17} /><strong>限制 / 退出</strong><ArrowRight size={17} /><strong>验证恢复</strong></div>
             </div>
             {overviewGroups.map((group) => (
-              <div className="overview-module-group" key={group.code}>
+              <div className={`overview-module-group ${group.modules.length === 1 ? "single-group" : ""}`} key={group.code}>
                 <div className="overview-group-heading"><span>{group.code}</span><h4>{group.title}</h4></div>
                 <div className="overview-module-grid">
                   {group.modules.map(({ key, index, title, summary, details, owners, image, target, Icon }) => (
                     <button key={key} className={`overview-module-card ${activeOverview === key ? "active" : ""}`} aria-pressed={activeOverview === key} onPointerEnter={() => setActiveOverview(key)} onFocus={() => setActiveOverview(key)} onClick={() => scrollToId(target)}>
-                      <span className="overview-module-image"><img src={image} alt="" /><i><Icon size={24} weight="duotone" /></i><b>{index}</b></span>
+                      {key === "degrade" ? <span className="overview-module-image degradation-overview-art" aria-hidden="true"><CameraSlash size={62} weight="duotone" /><ArrowRight size={22} /><SteeringWheel size={62} weight="duotone" /><ArrowRight size={22} /><Car size={62} weight="duotone" /><i><Icon size={24} weight="duotone" /></i><b>{index}</b></span> : <span className="overview-module-image"><img src={image} alt="" /><i><Icon size={24} weight="duotone" /></i><b>{index}</b></span>}
                       <span className="overview-module-copy"><small>MODULE {index}</small><strong>{title}</strong><em>{summary}</em></span>
                       <span className="overview-module-details"><span>{details.map((item) => <i key={item}>{item}</i>)}</span><span className="owner-chips">{owners.map((owner) => <b key={owner}>{owner}</b>)}</span></span>
                       <span className="overview-module-link">查看本章 <ArrowRight size={16} /></span>
@@ -1037,6 +1077,38 @@ function DmsModule() {
             <span><CheckCircle size={19} weight="duotone" /><b>关键链路全部通过</b><small>允许激活组合驾驶辅助</small></span>
             <span><X size={19} /><b>任一安全关键项失败</b><small>拒绝激活并提示具体故障</small></span>
             <span><Broadcast size={19} weight="duotone" /><b>仅 SOS 不可用</b><small>本地功能可运行，远程能力明确降级</small></span>
+          </div>
+        </Reveal>
+
+        <Reveal id="dms-degradation" className="degradation-section">
+          <div className="degradation-heading">
+            <div><p className="eyebrow">DEGRADATION / EXCEPTION BOUNDARY</p><h2>异常边界与退化机制</h2></div>
+            <p>区分可恢复的图像质量问题、链路超时和硬件故障。替代信号只支持短时确认驾驶员是否有操作回应，不能把不完整监测包装成正常 DMS。</p>
+          </div>
+          <div className="degradation-layout">
+            <figure className="degradation-visual">
+              <div className="degradation-visual-art" role="img" aria-label="DMS 摄像头异常后转为低置信度替代监测，并限制辅助驾驶功能"><span><CameraSlash size={64} weight="duotone" /><b>监测异常</b></span><ArrowRight size={24} /><span><SteeringWheel size={64} weight="duotone" /><b>替代信号</b></span><ArrowRight size={24} /><span><Car size={64} weight="duotone" /><b>限制 / 退出</b></span></div>
+              <figcaption><span>{degradationCases[activeDegradation].code}</span><strong>{degradationCases[activeDegradation].status}</strong></figcaption>
+            </figure>
+            <div className="degradation-content">
+              <div className="degradation-tabs" role="tablist" aria-label="选择 DMS 异常类型">
+                {degradationCases.map((item, index) => {
+                  const CaseIcon = degradationIconList[index];
+                  return <button id={`degradation-tab-${item.key}`} aria-controls="degradation-panel" key={item.key} role="tab" aria-selected={activeDegradation === index} className={activeDegradation === index ? "active" : ""} onPointerEnter={() => setActiveDegradation(index)} onFocus={() => setActiveDegradation(index)} onClick={() => setActiveDegradation(index)}><CaseIcon size={19} weight="duotone" /><span><b>{item.code}</b>{item.title}</span></button>;
+                })}
+              </div>
+              <AnimatePresence mode="wait">
+                <motion.div id="degradation-panel" role="tabpanel" aria-labelledby={`degradation-tab-${degradationCases[activeDegradation].key}`} key={degradationCases[activeDegradation].key} className="degradation-route" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: .35, ease }}>
+                  {[
+                    ["01", "故障识别", degradationCases[activeDegradation].symptom],
+                    ["02", "临时替代监测", degradationCases[activeDegradation].fallback],
+                    ["03", "辅助驾驶限制", degradationCases[activeDegradation].limitation],
+                    ["04", "恢复条件", degradationCases[activeDegradation].recovery],
+                  ].map(([index, title, body], stepIndex) => <article key={title}><span>{index}</span><h3>{title}</h3><p>{body}</p>{stepIndex < 3 && <ArrowDown className="degradation-arrow" size={18} aria-hidden="true" />}</article>)}
+                </motion.div>
+              </AnimatePresence>
+              <div className="degradation-boundary-note"><WarningOctagon size={22} weight="duotone" /><p><b>替代能力边界</b>电容方向盘只能确认手是否接触，扭矩与踏板只能确认是否有操作；它们都不能证明驾驶员正在看路、保持清醒或具备接管能力。</p></div>
+            </div>
           </div>
         </Reveal>
 
@@ -1137,7 +1209,7 @@ function DmsModule() {
 
       <div id="dms-architecture" className="architecture section-space">
         <div className="shell">
-          <Reveal className="section-heading split-heading"><div><p className="eyebrow">SYSTEM ARCHITECTURE</p><h2>感知、计算、执行与通信组成安全链。</h2></div><p>网页以四层系统图重新组织原文硬件要求，并把失效、时延、隐私与回放要求放在同一阅读层级。</p></Reveal>
+          <Reveal className="section-heading split-heading"><div><p className="eyebrow">SYSTEM ARCHITECTURE</p><h2>感知、计算、执行与通信组成安全链。</h2></div><p>四层结构分别承接驾驶员与道路感知、状态计算、车辆控制和远程通信；每一层都需要明确失效、时延、隐私与事件回放要求。</p></Reveal>
           <div className="system-layer-grid">{systemLayers.map((layer, index) => {
             const LayerIcon = systemLayerIconList[index];
             return <Reveal className="system-layer-card" delay={index * .05} key={layer.title}><div className="system-layer-mark"><span>{layer.index}</span><i><LayerIcon size={28} weight="duotone" /></i></div><h3>{layer.title}</h3><ul>{layer.items.map((item) => <li key={item}>{item}</li>)}</ul></Reveal>;
@@ -1180,15 +1252,16 @@ function DmsModule() {
 
       <div className="roi section-space">
         <div className="shell">
-          <Reveal><p className="eyebrow light">ROI BASELINE</p><h2>安全价值也需要<br />被量化。</h2></Reveal>
+          <Reveal><p className="eyebrow light">SAFETY ROI</p><h2>核心回报：减少事故，<br />提高失能处置成功率。</h2></Reveal>
           <div className="roi-grid">
-            <Reveal><span>100,000</span><p>车队规模</p></Reveal>
-            <Reveal delay={0.06}><span>36</span><p>预计每年减少事故</p></Reveal>
-            <Reveal delay={0.12}><span>1,640 万</span><p>年度量化收益</p></Reveal>
-            <Reveal delay={0.18}><span>31%</span><p>首年 ROI</p></Reveal>
-            <Reveal delay={0.24}><span>9.1 个月</span><p>静态回收期</p></Reveal>
+            <Reveal><span>100,000 辆</span><p>安全能力覆盖车队</p></Reveal>
+            <Reveal delay={0.06}><span>36 起 / 年</span><p>预计减少事故</p></Reveal>
+            <Reveal delay={0.12}><span>30%</span><p>事故频次目标降幅</p></Reveal>
+            <Reveal delay={0.18}><span>≥ 99.9%</span><p>受控场地 RMF 安全停车成功率目标</p></Reveal>
+            <Reveal delay={0.24}><span>≥ 99.5%</span><p>有网条件下 SOS 建联成功率目标</p></Reveal>
           </div>
-          <p className="roi-note">基线：年行驶 20,000 km / 车，车队年里程 20 亿 km；事故率 6 次 / 亿 km，目标降低 30%；首年投入 1,250 万元。</p>
+          <div className="roi-impact-chain"><span><b>01 / 提前识别</b><small>在接管失败前识别分心、疲劳和失能风险</small></span><ArrowRight /><span><b>02 / 阻断升级</b><small>无响应时由 DCA 与 RMF 接管减速和停车</small></span><ArrowRight /><span><b>03 / 缩短救援</b><small>SOS 与车端处置并行，减少停车后的等待时间</small></span></div>
+          <p className="roi-note">安全收益测算示例：10 万辆车、单车年行驶 20,000 km，对应车队年里程 20 亿 km；若基线事故率为 6 次 / 亿 km，事故频次降低 30%，预计每年减少约 36 起事故。停车与 SOS 指标为测试验收目标，不代表量产实绩。</p>
         </div>
       </div>
     </section>
