@@ -566,4 +566,5 @@ export const appendix = [
 export const chapterGroups = [
   { title: "六车型对标", links: [["benchmark", "对标总览"], ["vehicle-detail", "单车型详情"], ["comparison", "座舱与辅助驾驶横向对比"], ["conclusion", "综合结论"]] },
   { title: "DMS PRD", links: [["dms", "PRD 总览"], ["dms-background", "需求背景与合规"], ["dms-checks", "启动前检查"], ["dms-degradation", "异常边界与退化机制"], ["dms-monitoring", "持续监测与状态判断"], ["dms-timeline", "分级提醒时间轴"], ["dms-hmi", "HMI 交互"], ["dms-rmf", "车辆处置与远程救援"], ["dms-architecture", "硬件与系统架构"], ["dms-competitors", "DMS 专项竞品"], ["dms-appendix", "测试与附录"]] },
+  { title: "机器人能力与产品对标", links: [["robot-benchmark", "对标总览"], ["robot-framework", "大模型、运动控制与机械结构"], ["robot-company", "四家公司详情"], ["robot-brain-control", "三层能力分析"], ["robot-morphology", "形态与作业场景"], ["robot-comparison", "横向对比"], ["robot-conclusion", "综合结论"]] },
 ];

@@ -42,6 +42,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { acceptanceRows, adasRows, appendix, chapterGroups, checks, cockpitRows, competitorRows, degradationCases, designImplications, driverStates, escalationRows, eventFields, gazeZones, hmiStates, monitoringRows, qualityRules, remotePermissions, scenarios, startupFaults, systemLayers, ttsRows, vehicles } from "./data";
+import RobotBenchmark from "./RobotBenchmark";
 
 const ease = [0.22, 1, 0.36, 1];
 gsap.registerPlugin(ScrollTrigger);
@@ -220,7 +221,7 @@ function Intro() {
             <span />
           </div>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-            智能汽车产品作品集
+            智能产品作品集
           </motion.p>
         </motion.div>
       )}
@@ -247,23 +248,27 @@ function Header({ progress, view, onNavigate }) {
   const go = (id) => {
     const benchmarkIds = new Set(chapterGroups[0].links.map(([linkId]) => linkId));
     const dmsIds = new Set(chapterGroups[1].links.map(([linkId]) => linkId));
+    const robotIds = new Set(chapterGroups[2].links.map(([linkId]) => linkId));
     if (id === "home") onNavigate("home");
+    else if (id === "robot") onNavigate("robot");
     else if (benchmarkIds.has(id)) onNavigate("benchmark", id);
     else if (dmsIds.has(id)) onNavigate("dms", id);
+    else if (robotIds.has(id)) onNavigate("robot", id);
     setMenuOpen(false);
     setMobileOpen(false);
   };
 
-  const visibleGroups = view === "home" ? chapterGroups : view === "benchmark" ? [chapterGroups[0]] : [chapterGroups[1]];
+  const visibleGroups = view === "home" ? chapterGroups : view === "benchmark" ? [chapterGroups[0]] : view === "dms" ? [chapterGroups[1]] : [chapterGroups[2]];
 
   return (
     <header className={`site-header ${hidden ? "is-hidden" : ""}`}>
       <div className="reading-progress" style={{ transform: `scaleX(${progress})` }} />
-      <button className="brand" onClick={() => go("home")}>智能汽车产品作品集</button>
+      <button className="brand" onClick={() => go("home")}>智能产品作品集</button>
       <nav className="desktop-nav" aria-label="主导航">
         <button onClick={() => go("home")}>首页</button>
         <button onClick={() => go("benchmark")}>六车型对标</button>
         <button onClick={() => go("dms")}>DMS PRD</button>
+        <button onClick={() => go("robot")}>机器人对标</button>
         <button className="chapter-trigger" onClick={() => setMenuOpen((v) => !v)} aria-expanded={menuOpen}>
           章节目录 <CaretDown size={14} weight="bold" />
         </button>
@@ -296,7 +301,9 @@ function Header({ progress, view, onNavigate }) {
               ? [["home", "首页"], ["benchmark", "对标总览"], ["dms", "DMS PRD"], ["vehicle-detail", "单车型详情"], ["comparison", "横向对比"], ["conclusion", "综合结论"]]
               : view === "dms"
                 ? [["home", "首页"], ["benchmark", "六车型对标"], ["dms", "PRD 总览"], ["dms-degradation", "异常边界"], ["dms-monitoring", "持续监测"], ["dms-timeline", "交互时间轴"], ["dms-appendix", "测试与附录"]]
-                : [["home", "首页"], ["benchmark", "六车型对标"], ["dms", "DMS PRD"]]
+                : view === "robot"
+                  ? [["home", "首页"], ["robot-benchmark", "机器人对标总览"], ["robot-framework", "能力对标框架"], ["robot-company", "四家公司"], ["robot-morphology", "形态选择"], ["robot-comparison", "横向对比"]]
+                  : [["home", "首页"], ["benchmark", "六车型对标"], ["dms", "DMS PRD"], ["robot", "机器人对标"]]
             ).map(([id, label]) => (
               <button key={id} onClick={() => go(id)}>{label}<ArrowRight /></button>
             ))}
@@ -312,6 +319,7 @@ function Hero({ onNavigate }) {
   const cards = [
     { id: "benchmark", no: "01", title: "六车型辅助驾驶\n与智能座舱对标", copy: "从定位、座舱、感知、计算平台到技术路线，建立可比较的车型研究框架。" },
     { id: "dms", no: "02", title: "驾驶员监测系统 PRD", copy: "围绕检查、监测、判断、提醒、车辆处置与远程救援，构建安全闭环。" },
+    { id: "robot", no: "03", title: "四家机器人\n能力与产品对标", copy: "比较四家公司在大模型、运动控制、机械结构与工程化场景上的差异。" },
   ];
 
   return (
@@ -319,12 +327,13 @@ function Hero({ onNavigate }) {
       <div className="hero-media" aria-hidden="true">
         <img className={`hero-vehicle-cutout ${active === "benchmark" ? "active" : ""}`} src="/assets/benchmark/cutouts/model-y.png" alt="" />
         <img className={`hero-dms-image ${active === "dms" ? "active" : ""}`} src="/assets/dms/home-prd-hero-v2.png" alt="" />
+        <img className={`hero-robot-image ${active === "robot" ? "active" : ""}`} src="/assets/robot/galbot-g1.png" alt="" />
         <span />
       </div>
       <div className="hero-copy shell">
-        <p className="eyebrow light">AUTOMOTIVE PRODUCT RESEARCH / 2026</p>
-        <h1><span>智能汽车</span><span>产品作品集</span></h1>
-        <p className="hero-sub">辅助驾驶 × 智能座舱 × 驾驶员安全管控</p>
+        <p className="eyebrow light">INTELLIGENT PRODUCT RESEARCH / 2026</p>
+        <h1><span>智能产品</span><span>作品集</span></h1>
+        <p className="hero-sub">辅助驾驶 × 智能座舱 × 驾驶员安全 × 具身智能</p>
       </div>
       <div className="hero-cards shell">
         {cards.map((card) => (
@@ -350,8 +359,8 @@ function Hero({ onNavigate }) {
 }
 
 function Marquee() {
-  const row1 = "TESLA · HARMONYOS · VLA · NOMI · HYPEROS · DMS · RMF · SOS · ";
-  const row2 = "智能座舱 · 辅助驾驶 · 感知融合 · 驾驶员安全 · 人机交互 · ";
+  const row1 = "TESLA · HARMONYOS · VLA · WORLD MODEL · DMS · RMF · SOS · ";
+  const row2 = "智能座舱 · 辅助驾驶 · 具身智能 · 运动控制 · 机械结构 · ";
   return (
     <section id="overview" className="marquee-section" aria-label="研究关键词">
       <div className="marquee row-one"><span>{row1.repeat(3)}</span></div>
@@ -365,8 +374,8 @@ function ModuleOverview({ onNavigate }) {
   return (
     <section className="module-overview shell section-space">
       <Reveal className="overview-title">
-        <p className="eyebrow">TWO EDITORIAL CHAPTERS</p>
-        <h2>从市场横向对标，<br />走向安全功能落地。</h2>
+        <p className="eyebrow">THREE RESEARCH MODULES</p>
+        <h2>从智能汽车，<br />延伸到具身智能。</h2>
       </Reveal>
       <Reveal className="overview-grid" delay={0.1}>
         <article className="overview-item">
@@ -380,6 +389,12 @@ function ModuleOverview({ onNavigate }) {
           <h3>DMS PRD</h3>
           <p>把驾驶员异常状态识别、分级提醒、车辆最小风险处置和远程救援组合成一条可验证的安全链路。</p>
           <button className="text-link" onClick={() => onNavigate("dms")}>查看安全闭环 <ArrowRight /></button>
+        </article>
+        <article className="overview-item robot-overview-item">
+          <span>03</span>
+          <h3>机器人能力与产品对标</h3>
+          <p>以大模型、运动控制和机械结构为统一坐标，比较宇树、智元、云深处和银河通用的产品路径。</p>
+          <button className="text-link" onClick={() => onNavigate("robot")}>进入机器人对标 <ArrowRight /></button>
         </article>
       </Reveal>
     </section>
@@ -1270,12 +1285,13 @@ function DmsModule() {
 
 function Footer({ view, onNavigate }) {
   const isHome = view === "home";
+  const footerTitle = isHome ? <>智能产品<br />作品集</> : view === "benchmark" ? <>六车型对标<br />阅读完毕</> : view === "dms" ? <>DMS PRD<br />阅读完毕</> : <>机器人对标<br />阅读完毕</>;
   return (
     <footer>
       <div className="shell footer-grid">
-        <div><p className="eyebrow light">{isHome ? "END OF PORTFOLIO" : "END OF DOCUMENT"}</p><h2>{isHome ? <>智能汽车<br />产品作品集</> : view === "benchmark" ? <>六车型对标<br />阅读完毕</> : <>DMS PRD<br />阅读完毕</>}</h2></div>
+        <div><p className="eyebrow light">{isHome ? "END OF PORTFOLIO" : "END OF DOCUMENT"}</p><h2>{footerTitle}</h2></div>
         <div>
-          <p>{isHome ? "两份研究文档，分别进入、分别阅读。" : "滚动到这里仅代表当前文档结束；另一份文档不会自动接在下方。"}</p>
+          <p>{isHome ? "三份研究模块，分别进入、分别阅读。" : "滚动到这里仅代表当前文档结束；其他模块不会自动接在下方。"}</p>
           <button onClick={() => isHome ? scrollToId("home") : onNavigate("home")}>{isHome ? "返回顶部" : "返回作品集首页"} <ArrowUpRight /></button>
         </div>
       </div>
@@ -1286,7 +1302,7 @@ function Footer({ view, onNavigate }) {
 export function App() {
   const routeFromHash = () => {
     const route = window.location.hash.replace("#/", "");
-    return ["benchmark", "dms"].includes(route) ? route : "home";
+    return ["benchmark", "dms", "robot"].includes(route) ? route : "home";
   };
   const [view, setView] = useState(routeFromHash);
   const [progress, setProgress] = useState(0);
@@ -1349,6 +1365,7 @@ export function App() {
             {view === "home" && <><Hero onNavigate={navigate} /><Marquee /><ModuleOverview onNavigate={navigate} /></>}
             {view === "benchmark" && <Benchmark />}
             {view === "dms" && <DmsModule />}
+            {view === "robot" && <RobotBenchmark />}
           </motion.div>
         </AnimatePresence>
       </main>
