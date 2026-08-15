@@ -41,7 +41,7 @@ import {
   WarningOctagon,
   X,
 } from "@phosphor-icons/react";
-import { acceptanceRows, adasRows, appendix, chapterGroups, checks, cockpitRows, competitorRows, degradationCases, designImplications, driverStates, escalationRows, eventFields, gazeZones, hmiStates, monitoringRows, qualityRules, remotePermissions, scenarios, startupFaults, systemLayers, ttsRows, vehicles } from "./data";
+import { acceptanceRows, adasRows, appendix, chapterGroups, checks, cockpitRows, competitorRows, degradationCases, designImplications, dmsDeliveryStages, dmsDriverStateFlow, dmsMetricGroups, dmsPriorityGroups, dmsSystemStateFlow, dmsTrackingEvents, driverStates, escalationRows, eventFields, gazeZones, hmiStates, monitoringRows, qualityRules, remotePermissions, scenarios, startupFaults, systemLayers, ttsRows, vehicles } from "./data";
 import RobotBenchmark from "./RobotBenchmark";
 
 const ease = [0.22, 1, 0.36, 1];
@@ -148,24 +148,43 @@ function ZoomableImage({ src, alt, className = "" }) {
   );
 }
 
+const levelThreeTone = {
+  name: "三连急促",
+  frequencies: [1080, 1080, 1080, 760, 760, 760],
+  interval: 0.22,
+  duration: 0.145,
+  peak: 0.4,
+  oscillator: "square",
+  rumble: 86,
+  vibration: [150, 55, 150, 55, 150, 90, 260],
+};
+
 function playAlertTone(level) {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContext) return;
+  if (!AudioContext) return 0;
   const context = new AudioContext();
   const master = context.createGain();
-  master.gain.value = 0.92;
-  master.connect(context.destination);
+  const compressor = context.createDynamicsCompressor();
+  master.gain.value = level === 3 ? 0.9 : 0.92;
+  compressor.threshold.value = -18;
+  compressor.knee.value = 12;
+  compressor.ratio.value = 5;
+  compressor.attack.value = 0.004;
+  compressor.release.value = 0.12;
+  master.connect(compressor).connect(context.destination);
 
-  const count = level === 1 ? 2 : level === 2 ? 3 : 5;
-  const gap = level === 1 ? 0.24 : level === 2 ? 0.5 : 0.43;
-  const duration = level === 1 ? 0.12 : level === 2 ? 0.35 : 0.31;
-  const peak = level === 1 ? 0.14 : level === 2 ? 0.24 : 0.34;
+  const levelThreePreset = levelThreeTone;
+  const frequencies = level === 3 ? levelThreePreset.frequencies : level === 2 ? [900, 900, 900] : [760, 760];
+  const count = frequencies.length;
+  const gap = level === 3 ? levelThreePreset.interval : level === 2 ? 0.5 : 0.24;
+  const duration = level === 3 ? levelThreePreset.duration : level === 2 ? 0.35 : 0.12;
+  const peak = level === 3 ? levelThreePreset.peak : level === 2 ? 0.24 : 0.14;
   for (let i = 0; i < count; i += 1) {
     const oscillator = context.createOscillator();
     const gain = context.createGain();
     const start = context.currentTime + 0.04 + i * gap;
-    oscillator.type = level === 1 ? "sine" : level === 2 ? "square" : "sawtooth";
-    oscillator.frequency.value = level === 3 ? (i % 2 ? 610 : 940) : level === 2 ? 900 : 760;
+    oscillator.type = level === 3 ? levelThreePreset.oscillator : level === 2 ? "square" : "sine";
+    oscillator.frequency.setValueAtTime(frequencies[i], start);
     gain.gain.setValueAtTime(0.0001, start);
     gain.gain.exponentialRampToValueAtTime(peak, start + 0.014);
     gain.gain.setValueAtTime(peak, start + Math.max(0.03, duration - 0.045));
@@ -178,8 +197,8 @@ function playAlertTone(level) {
   if (level === 3) {
     const vibration = context.createOscillator();
     const vibrationGain = context.createGain();
-    vibration.type = "sawtooth";
-    vibration.frequency.value = 72;
+    vibration.type = "triangle";
+    vibration.frequency.value = levelThreePreset.rumble;
     vibrationGain.gain.setValueAtTime(0.0001, context.currentTime);
     for (let i = 0; i < count; i += 1) {
       const start = context.currentTime + 0.04 + i * gap;
@@ -193,9 +212,11 @@ function playAlertTone(level) {
   }
 
   if (navigator.vibrate) {
-    navigator.vibrate(level === 1 ? [90, 80, 90] : level === 2 ? [180, 90, 180] : [320, 80, 320, 80, 460]);
+    navigator.vibrate(level === 1 ? [90, 80, 90] : level === 2 ? [180, 90, 180] : levelThreePreset.vibration);
   }
-  window.setTimeout(() => context.close(), level === 3 ? 2800 : 2100);
+  const totalMs = Math.ceil((0.04 + (count - 1) * gap + duration + 0.24) * 1000);
+  window.setTimeout(() => context.close(), totalMs + 180);
+  return totalMs;
 }
 
 function Intro() {
@@ -317,9 +338,9 @@ function Header({ progress, view, onNavigate }) {
 function Hero({ onNavigate }) {
   const [active, setActive] = useState("benchmark");
   const cards = [
-    { id: "benchmark", no: "01", title: "六车型辅助驾驶\n与智能座舱对标", copy: "从定位、座舱、感知、计算平台到技术路线，建立可比较的车型研究框架。" },
+    { id: "benchmark", no: "01", title: "辅助驾驶与\n智能座舱对标", copy: "从定位、座舱、感知、计算平台到技术路线，建立可比较的车型研究框架。" },
     { id: "dms", no: "02", title: "驾驶员监测系统 PRD", copy: "围绕检查、监测、判断、提醒、车辆处置与远程救援，构建安全闭环。" },
-    { id: "robot", no: "03", title: "四家机器人\n能力与产品对标", copy: "比较四家公司在大模型、运动控制、机械结构与工程化场景上的差异。" },
+    { id: "robot", no: "03", title: "机器人\n能力与产品对标", copy: "比较四家公司在大模型、运动控制、机械结构与工程化场景上的差异。" },
   ];
 
   return (
@@ -327,7 +348,7 @@ function Hero({ onNavigate }) {
       <div className="hero-media" aria-hidden="true">
         <img className={`hero-vehicle-cutout ${active === "benchmark" ? "active" : ""}`} src="/assets/benchmark/cutouts/model-y.png" alt="" />
         <img className={`hero-dms-image ${active === "dms" ? "active" : ""}`} src="/assets/dms/home-prd-hero-v2.png" alt="" />
-        <img className={`hero-robot-image ${active === "robot" ? "active" : ""}`} src="/assets/robot/galbot-g1.png" alt="" />
+        <img className={`hero-robot-image ${active === "robot" ? "active" : ""}`} src="/assets/robot/agibot-humanoid.png" alt="" />
         <span />
       </div>
       <div className="hero-copy shell">
@@ -375,12 +396,12 @@ function ModuleOverview({ onNavigate }) {
     <section className="module-overview shell section-space">
       <Reveal className="overview-title">
         <p className="eyebrow">THREE RESEARCH MODULES</p>
-        <h2>从智能汽车，<br />延伸到具身智能。</h2>
+        <h2 className="overview-theme-title"><span>智能汽车研究，</span><span>延伸至具身智能。</span></h2>
       </Reveal>
       <Reveal className="overview-grid" delay={0.1}>
         <article className="overview-item">
           <span>01</span>
-          <h3>六车型对标</h3>
+          <h3 className="safe-break-title"><span>辅助驾驶与</span><span>智能座舱对标</span></h3>
           <p>研究六款代表性车型如何把智能座舱、感知硬件、计算平台与辅助驾驶路线转化为不同的产品优势。</p>
           <button className="text-link" onClick={() => onNavigate("benchmark")}>浏览全部车型 <ArrowRight /></button>
         </article>
@@ -572,7 +593,7 @@ function Benchmark() {
         <span className="media-scrim" />
         <div className="cover-copy shell">
           <p className="eyebrow light">MODULE 01 / BENCHMARK</p>
-          <h2>六车型辅助驾驶<br />与智能座舱对标</h2>
+          <h2 className="safe-break-title"><span>六车型辅助驾驶</span><span>与智能座舱对标</span></h2>
           <p>以统一维度比较六款车型的座舱体验、辅助驾驶、感知方案与计算平台。</p>
         </div>
       </div>
@@ -735,7 +756,7 @@ function Benchmark() {
       <div id="comparison" className="comparison section-space">
         <div className="shell">
           <Reveal className="section-heading split-heading">
-            <div><p className="eyebrow">CROSS-CAR COMPARISON</p><h2>把差异放进<br />同一张表。</h2></div>
+            <div><p className="eyebrow">CROSS-CAR COMPARISON</p><h2 className="safe-break-title"><span>把差异放进</span><span>同一张表。</span></h2></div>
             <p>六款车型围绕座舱显示、语音与生态，以及辅助驾驶感知、计算、模型、功能覆盖和安全要求进行横向对照。</p>
           </Reveal>
           <div className="comparison-switch" role="tablist" aria-label="选择横向对比类型">
@@ -753,7 +774,7 @@ function Benchmark() {
       </div>
 
       <div id="conclusion" className="benchmark-conclusion shell section-space">
-        <Reveal><p className="eyebrow">SYNTHESIS</p><h2>旗舰产品没有单一路径，<br />差异来自市场定位与核心场景。</h2></Reveal>
+        <Reveal><p className="eyebrow">SYNTHESIS</p><h2 className="safe-break-title"><span>旗舰产品没有单一路径，</span><span>差异来自市场定位与核心场景。</span></h2></Reveal>
         <div className="conclusion-grid">
           <Reveal><span>01</span><h3>生态协同</h3><p>问界 M9、小米 SU7 与蔚来 ES9 通过操作系统、终端协同或服务网络，把车辆体验延伸到手机、家庭与补能服务。</p></Reveal>
           <Reveal delay={0.08}><span>02</span><h3>家庭与安全场景</h3><p>理想 L9 与小鹏 GX 围绕多人出行、后排任务和高风险安全处置，组织座舱硬件与辅助驾驶能力。</p></Reveal>
@@ -917,14 +938,15 @@ function HmiVisualizer() {
   const timerRef = useRef(null);
   const activeState = hmiStates.find((item) => item.id === activeId) || hmiStates[0];
   const ActiveIcon = hmiIconMap[activeState.icon] || Warning;
+  const imageAlreadyContainsAlert = ["dca-3", "rmf-3", "sos"].includes(activeState.id);
 
   useEffect(() => () => window.clearTimeout(timerRef.current), []);
 
   const previewSound = () => {
-    playAlertTone(activeState.tone);
+    const duration = playAlertTone(activeState.tone);
     setPlaying(true);
     window.clearTimeout(timerRef.current);
-    timerRef.current = window.setTimeout(() => setPlaying(false), activeState.tone === 3 ? 2400 : 1600);
+    timerRef.current = window.setTimeout(() => setPlaying(false), Math.max(duration, activeState.tone === 3 ? 1800 : 1500));
   };
 
   return (
@@ -941,11 +963,13 @@ function HmiVisualizer() {
           <AnimatePresence mode="wait">
             <motion.img key={activeState.id} src={activeState.image} alt={`${activeState.code} ${activeState.level}车机显示示意`} initial={{ opacity: 0.25 }} animate={{ opacity: 1 }} exit={{ opacity: 0.25 }} transition={{ duration: 0.35, ease }} />
           </AnimatePresence>
-          <motion.div key={`${activeState.id}-alert`} className="hmi-screen-alert" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease }}>
-            <span className="hmi-alert-icon"><ActiveIcon size={28} weight="duotone" /></span>
-            <span className="hmi-alert-copy"><b>{activeState.title}</b><small>{activeState.detail}</small></span>
-            <span className="sound-meter" aria-hidden="true">{[0, 1, 2, 3, 4].map((bar) => <i key={bar} />)}</span>
-          </motion.div>
+          {!imageAlreadyContainsAlert && (
+            <motion.div key={`${activeState.id}-alert`} className="hmi-screen-alert" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease }}>
+              <span className="hmi-alert-icon"><ActiveIcon size={28} weight="duotone" /></span>
+              <span className="hmi-alert-copy"><b>{activeState.title}</b><small>{activeState.detail}</small></span>
+              <span className="sound-meter" aria-hidden="true">{[0, 1, 2, 3, 4].map((bar) => <i key={bar} />)}</span>
+            </motion.div>
+          )}
         </div>
 
         <aside className="hmi-preview-copy">
@@ -956,8 +980,8 @@ function HmiVisualizer() {
             <div><dt>提示形式</dt><dd>{activeState.theme === "level-one" ? "局部小卡片，不遮挡驾驶主信息" : activeState.theme === "level-two" ? "固定增强卡片，持续占位但不扩展全屏" : "持续高优先级卡片，同步车辆处置状态"}</dd></div>
             <div><dt>驾驶员动作</dt><dd>{activeState.detail}</dd></div>
           </dl>
-          <button className={playing ? "playing" : ""} onClick={previewSound} aria-label={`试听 ${activeState.code} ${activeState.level}提示音`}><SpeakerHigh size={19} />{playing ? "正在播放" : "试听该状态"}<span className="audio-level">音量 {activeState.tone === 1 ? "Ⅰ" : activeState.tone === 2 ? "Ⅱ" : "Ⅲ"}</span></button>
-          <small className="sound-disclaimer">声音只在点击后播放。三级加入低频震动质感；支持的移动设备同时触发触觉反馈。</small>
+          <button className={playing ? "playing" : ""} onClick={() => previewSound()} aria-label={`试听 ${activeState.code} ${activeState.level}提示音`}><SpeakerHigh size={19} />{playing ? "正在播放" : "试听该状态"}<span className="audio-level">音量 {activeState.tone === 1 ? "Ⅰ" : activeState.tone === 2 ? "Ⅱ" : "Ⅲ"}</span></button>
+          <small className="sound-disclaimer">{activeState.tone === 3 ? `三级使用${levelThreeTone.name}告警音，并叠加低频与触觉反馈。` : ""}声音只在点击后播放。</small>
         </aside>
       </div>
     </div>
@@ -981,6 +1005,8 @@ function DmsModule() {
   const [openIndex, setOpenIndex] = useState(0);
   const [activeOverview, setActiveOverview] = useState("check");
   const [activeDegradation, setActiveDegradation] = useState(0);
+  const [activeTrackingEvent, setActiveTrackingEvent] = useState(0);
+  const trackingEvent = dmsTrackingEvents[activeTrackingEvent];
   const overviewGroups = [
     {
       code: "01 / 识别与判定",
@@ -1015,7 +1041,7 @@ function DmsModule() {
         <div className="shell dms-cover-grid">
           <div className="dms-cover-copy">
             <p className="eyebrow light">MODULE 02 / PRODUCT REQUIREMENT</p>
-            <h2>驾驶员监测<br />系统 PRD</h2>
+            <h2 className="safe-break-title"><span>驾驶员监测</span><span>系统 PRD</span></h2>
             <p>组合驾驶辅助安全管控：从驾驶员状态识别到最小风险停车。</p>
             <div className="dms-cover-facts">
               <span><b>10 km/h</b><small>持续监测启用车速</small></span>
@@ -1060,7 +1086,7 @@ function DmsModule() {
 
       <div id="dms-background" className="dms-background shell section-space">
         <Reveal className="section-heading split-heading">
-          <div><p className="eyebrow">BACKGROUND / COMPLIANCE</p><h2>安全目标不是多一次提醒，<br />而是形成可执行闭环。</h2></div>
+          <div><p className="eyebrow">BACKGROUND / COMPLIANCE</p><h2 className="safe-break-title"><span>安全目标不是多一次提醒，</span><span>而是形成可执行闭环。</span></h2></div>
           <p>当组合驾驶辅助持续运行而驾驶员无法履行接管责任时，单一告警不足以降低风险。产品必须同时覆盖驾驶员状态识别、可恢复提醒、车辆最小风险处置和远程救援。</p>
         </Reveal>
         <div className="principle-grid">
@@ -1072,7 +1098,7 @@ function DmsModule() {
 
       <div className="dms-intro shell section-space">
         <Reveal className="section-heading split-heading">
-          <div><p className="eyebrow">PRODUCT LOGIC</p><h2>先确认系统可用，<br />再判断人是否可控。</h2></div>
+          <div><p className="eyebrow">PRODUCT LOGIC</p><h2 className="safe-break-title"><span>先确认系统可用，</span><span>再判断人是否可控。</span></h2></div>
           <p>组合驾驶辅助开启后，系统持续监测双手、视线、长闭眼、异常头姿与有效操作。常规分心逐级提醒；持续无响应或疑似失能进入减速、安全停车与远程救援。</p>
         </Reveal>
 
@@ -1082,7 +1108,7 @@ function DmsModule() {
 
         <Reveal className="startup-fault-section">
           <div className="startup-fault-head">
-            <div><p className="eyebrow">STARTUP AVAILABILITY</p><h3>启动前先定位“为什么不可用”</h3></div>
+            <div><p className="eyebrow">STARTUP AVAILABILITY</p><h3 className="safe-break-title"><span>启动前定位</span><span>系统不可用原因</span></h3></div>
             <p>遮挡、环境质量、信号超时和设备故障不能归为同一个结果。系统必须输出具体原因，并据此决定拒绝开启、条件降级或仅关闭远程服务。</p>
           </div>
           <div className="startup-fault-grid">
@@ -1127,9 +1153,33 @@ function DmsModule() {
           </div>
         </Reveal>
 
+        <Reveal id="dms-state-model" className="dms-state-model">
+          <div className="section-heading split-heading compact-heading">
+            <div><p className="eyebrow">DUAL STATE MACHINE</p><h2 className="safe-break-title"><span>驾驶员风险与系统可用性</span><span>分别判断、共同决策。</span></h2></div>
+            <p>第一条状态机判断驾驶员是否能够继续承担驾驶责任，第二条状态机判断监测与执行链路是否可靠。最终策略同时读取两条结果，避免把“摄像头看不清”误判为“驾驶员正常”。</p>
+          </div>
+          <div className="state-machine-board">
+            <div className="state-machine-lane driver-lane">
+              <div className="state-lane-label"><span>DRIVER</span><b>驾驶员状态</b><small>决定提醒等级与车辆介入</small></div>
+              <ol>{dmsDriverStateFlow.map((item, index) => <li key={item.code}><span>{item.code}</span><b>{item.title}</b><small>{item.note}</small>{index < dmsDriverStateFlow.length - 1 && <ArrowRight aria-hidden="true" />}</li>)}</ol>
+            </div>
+            <div className="state-machine-lane system-lane">
+              <div className="state-lane-label"><span>SYSTEM</span><b>系统可用性</b><small>决定允许、降级、拒绝或退出</small></div>
+              <ol>{dmsSystemStateFlow.map((item, index) => <li key={item.code}><span>{item.code}</span><b>{item.title}</b><small>{item.note}</small>{index < dmsSystemStateFlow.length - 1 && <ArrowRight aria-hidden="true" />}</li>)}</ol>
+            </div>
+            <div className="state-decision-rule"><ShieldCheck size={22} weight="duotone" /><div><b>合并决策规则</b><p>驾驶员风险取当前最高等级；系统可用性独立保留。任一安全关键链路不可用时，不用低风险驾驶员状态覆盖故障结论。</p></div></div>
+          </div>
+          <div className="threshold-governance">
+            <span><b>01 / 产品确认阈值</b><small>2 s 为本 PRD 的算法确认初值，不等同于法规规定的提醒时刻</small></span>
+            <span><b>02 / 视线脱离上限</b><small>UN R171：车速大于 10 km/h，持续视觉脱离最迟 5 s 发出 EOR</small></span>
+            <span><b>03 / 手部离盘上限</b><small>UN R171：持续手部脱离 5 s 发出 HOR；仅在确认视线有效时可再延后最多 5 s</small></span>
+          </div>
+          <a className="regulation-reference" href="https://unece.org/sites/default/files/2025-03/R171e.pdf" target="_blank" rel="noreferrer">UN Regulation No. 171 · 5.5.4.2.6 <ArrowUpRight size={15} /></a>
+        </Reveal>
+
         <Reveal id="dms-monitoring" className="monitoring-section">
           <div className="section-heading split-heading compact-heading">
-            <div><p className="eyebrow">CONTINUOUS MONITORING</p><h2>异常状态均有明确的<br />确认与恢复条件。</h2></div>
+            <div><p className="eyebrow">CONTINUOUS MONITORING</p><h2 className="safe-break-title"><span>异常状态均有明确的</span><span>确认与恢复条件。</span></h2></div>
             <p>辅助驾驶开启且车速大于 10 km/h 后进入监测。状态优先级为：疑似失能 ＞ 疲劳/疑似睡着 ＞ 手眼同时脱离 ＞ 单一脱离 ＞ 正常；监测不可用单独处理。</p>
           </div>
           <div className="table-wrap monitoring-table">
@@ -1140,7 +1190,7 @@ function DmsModule() {
             </table>
           </div>
           <div className="gaze-zone-section">
-            <div className="gaze-zone-head"><div><span>GAZE REGION CALIBRATION</span><h3>后视镜与短时导航查看不应被误报</h3></div><p>只有连续离开全部驾驶任务相关区域，才进入 EOR 计时。各区域需按车型、坐姿和屏幕位置标定。</p></div>
+            <div className="gaze-zone-head"><div><span>GAZE REGION CALIBRATION</span><h3 className="safe-break-title"><span>后视镜与短时导航查看</span><span>不应被误报</span></h3></div><p>只有连续离开全部驾驶任务相关区域，才进入 EOR 计时。各区域需按车型、坐姿和屏幕位置标定。</p></div>
             <div className="gaze-zone-grid">
               {gazeZones.map((zone) => <article key={zone.code}><span className="gaze-zone-icon"><Eye size={21} weight="duotone" /></span><div><b>{zone.code}</b><h4>{zone.title}</h4><p>{zone.rule}</p></div><small>{zone.status}</small></article>)}
             </div>
@@ -1160,8 +1210,8 @@ function DmsModule() {
 
         <Reveal className="escalation-section">
           <div className="section-heading split-heading compact-heading">
-            <div><p className="eyebrow">ESCALATION ROUTE</p><h2>一张路线图，<br />看清所有升级节点。</h2></div>
-            <p>正文采用 2 s 作为初始异常确认；附录另列出 1 s 建议初值。两者都属于量产前需由算法、人因、法规与实车测试共同冻结的标定项，法规最迟上限不放宽。</p>
+            <div><p className="eyebrow">ESCALATION ROUTE</p><h2 className="safe-break-title"><span>一张路线图，</span><span>看清所有升级节点。</span></h2></div>
+            <p>2 s 是产品侧异常确认初值。提醒时限按 UN R171 校核：EOR 最迟 5 s；HOR 原则上 5 s，仅在持续确认视线有效时允许延后，且延后不超过 5 s。</p>
           </div>
           <div className="escalation-route" role="list" aria-label="DMS 分级提醒路线">
             {escalationRows.map(([title, trigger, hmi, next], index) => {
@@ -1190,7 +1240,7 @@ function DmsModule() {
 
       <div id="dms-rmf" className="rmf-section shell section-space">
         <Reveal className="section-heading split-heading">
-          <div><p className="eyebrow">RMF × SOS</p><h2>两个泳道，<br />同一时刻启动。</h2></div>
+          <div><p className="eyebrow">RMF × SOS</p><h2 className="safe-break-title"><span>两个泳道，</span><span>同一时刻启动。</span></h2></div>
           <p>车端处置是本地安全闭环，远程救援是并行服务链路。网络中断时，车辆仍继续稳定减速、选择安全区域并停车。</p>
         </Reveal>
         <Reveal className="swimlanes">
@@ -1233,6 +1283,52 @@ function DmsModule() {
         </div>
       </div>
 
+      <div id="dms-measurement" className="dms-measurement section-space">
+        <div className="shell">
+          <Reveal className="section-heading split-heading light-heading">
+            <div><p className="eyebrow light">METRICS / TRACKING</p><h2 className="safe-break-title"><span>用结果指标验证安全，</span><span>用过程事件定位问题。</span></h2></div>
+            <p>指标覆盖安全结果、过程质量、误报体验与数据约束；事件从监测可用性、驾驶员状态一路关联到 RMF 和 SOS，支持按车型、版本与场景回放。</p>
+          </Reveal>
+          <div className="dms-metric-grid">
+            {dmsMetricGroups.map((group, index) => <Reveal className="dms-metric-card" delay={index * .06} key={group.code}><div className="metric-card-head"><span>{group.code}</span><h3>{group.title}</h3><p>{group.summary}</p></div><div className="metric-list">{group.metrics.map(([name, unit, definition]) => <article key={name}><div><b>{name}</b><small>{unit}</small></div><p>{definition}</p></article>)}</div></Reveal>)}
+          </div>
+          <Reveal className="tracking-explorer">
+            <div className="tracking-explorer-head"><div><span>EVENT DICTIONARY</span><h3>核心事件与验收口径</h3></div><p>事件名称、触发、字段、上传、隐私和验收使用同一份字典，避免开发、测试与数据分析各自解释。</p></div>
+            <div className="tracking-layout">
+              <div className="tracking-tabs" role="tablist" aria-label="选择 DMS 核心埋点事件">
+                {dmsTrackingEvents.map((event, index) => <button id={`tracking-tab-${index}`} key={event.id} role="tab" aria-selected={activeTrackingEvent === index} aria-controls="tracking-event-panel" className={activeTrackingEvent === index ? "active" : ""} onPointerEnter={() => setActiveTrackingEvent(index)} onFocus={() => setActiveTrackingEvent(index)} onClick={() => setActiveTrackingEvent(index)}><span>{String(index + 1).padStart(2, "0")}</span><b>{event.title}</b><small>{event.id}</small></button>)}
+              </div>
+              <AnimatePresence mode="wait">
+                <motion.article id="tracking-event-panel" role="tabpanel" aria-labelledby={`tracking-tab-${activeTrackingEvent}`} key={trackingEvent.id} className="tracking-event-panel" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: .35, ease }}>
+                  <div className="tracking-event-title"><span>ACTIVE EVENT</span><h4>{trackingEvent.id}</h4><p>{trackingEvent.title}</p></div>
+                  <dl>
+                    <div><dt>触发条件</dt><dd>{trackingEvent.trigger}</dd></div>
+                    <div><dt>关键字段</dt><dd>{trackingEvent.fields}</dd></div>
+                    <div><dt>上报策略</dt><dd>{trackingEvent.policy}</dd></div>
+                    <div><dt>隐私约束</dt><dd>{trackingEvent.privacy}</dd></div>
+                    <div><dt>验收口径</dt><dd>{trackingEvent.acceptance}</dd></div>
+                  </dl>
+                </motion.article>
+              </AnimatePresence>
+            </div>
+          </Reveal>
+        </div>
+      </div>
+
+      <div id="dms-delivery" className="dms-delivery shell section-space">
+        <Reveal className="section-heading split-heading">
+          <div><p className="eyebrow">PRIORITY / DELIVERY</p><h2 className="safe-break-title"><span>先冻结安全基线，</span><span>再扩展体验与运营能力。</span></h2></div>
+          <p>MoSCoW 管理版本范围，KANO 区分安全基本项与体验增强项；同一优先层级在工作量、截止日和依赖明确后再使用 WSJF 排序。</p>
+        </Reveal>
+        <div className="priority-grid">
+          {dmsPriorityGroups.map((group, index) => <Reveal className={`priority-card priority-${group.level.toLowerCase()}`} delay={index * .06} key={group.level}><div><span>{group.level}</span><b>{group.title}</b></div><p>{group.rule}</p><ul>{group.items.map((item) => <li key={item}><Check size={15} />{item}</li>)}</ul></Reveal>)}
+        </div>
+        <Reveal className="delivery-roadmap">
+          <div className="delivery-roadmap-head"><div><span>RELEASE GATES</span><h3>跨部门交付路线</h3></div><p>每一阶段都有主责部门和明确退出条件；未通过当前门禁，不进入下一阶段。</p></div>
+          <ol>{dmsDeliveryStages.map((stage, index) => <li key={stage.gate}><div className="delivery-gate"><span>{stage.gate}</span><i>{String(index + 1).padStart(2, "0")}</i></div><h4>{stage.title}</h4><p>{stage.owners}</p><small>{stage.exit}</small>{index < dmsDeliveryStages.length - 1 && <ArrowRight aria-hidden="true" />}</li>)}</ol>
+        </Reveal>
+      </div>
+
       <div id="dms-competitors" className="competitor-section shell section-space">
         <Reveal className="section-heading split-heading">
           <div><p className="eyebrow">DMS BENCHMARK</p><h2>专项对标：提醒、停车与救援闭环。</h2></div>
@@ -1267,7 +1363,7 @@ function DmsModule() {
 
       <div className="roi section-space">
         <div className="shell">
-          <Reveal><p className="eyebrow light">SAFETY ROI</p><h2>核心回报：减少事故，<br />提高失能处置成功率。</h2></Reveal>
+          <Reveal><p className="eyebrow light">SAFETY ROI</p><h2 className="safe-break-title"><span>核心回报：减少事故，</span><span>提高失能处置成功率。</span></h2></Reveal>
           <div className="roi-grid">
             <Reveal><span>100,000 辆</span><p>安全能力覆盖车队</p></Reveal>
             <Reveal delay={0.06}><span>36 起 / 年</span><p>预计减少事故</p></Reveal>

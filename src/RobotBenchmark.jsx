@@ -56,7 +56,11 @@ function FrameworkDiagram() {
       <div className="shell">
         <RobotReveal className="robot-section-heading">
           <p className="eyebrow">BENCHMARK FRAMEWORK / 对标框架</p>
-          <h2>从大模型、运动控制<br />与机械结构展开对标。</h2>
+          <h2 className="safe-break-title">
+            <span>从大模型与任务规划，</span>
+            <span>到运动控制与执行，</span>
+            <span>再到机械结构。</span>
+          </h2>
           <p>大模型负责理解和规划任务，运动控制负责实时执行，机械结构决定机器人能够进入哪些作业环境。</p>
         </RobotReveal>
         <div className="robot-framework-map" role="tablist" aria-label="机器人大模型、运动控制与机械结构对标框架">
@@ -99,11 +103,11 @@ function CompanyDetail() {
     <section id="robot-company" className="robot-company-section section-space">
       <div className="shell">
         <RobotReveal className="robot-section-heading light-heading">
-          <p className="eyebrow light">COMPANY PROFILES / 四家公司</p>
-          <h2>四家公司产品<br />与技术路线。</h2>
+          <p className="eyebrow light">COMPANY PROFILES / 主流机器人企业</p>
+          <h2 className="safe-break-title"><span>主流机器人产品</span><span>与技术路线。</span></h2>
           <p>分别呈现产品定位、大模型与任务规划、运动控制、机械结构，以及已公开的灵巧手和末端执行器配置。</p>
         </RobotReveal>
-        <div className="robot-company-rail" role="tablist" aria-label="四家公司循环切换">
+        <div className="robot-company-rail" role="tablist" aria-label="主流机器人企业循环切换">
           <div className="robot-company-track">
             {railCopies.map((copyIndex) => (
               <div className="robot-company-set" key={copyIndex} aria-hidden={copyIndex > 0 || undefined}>
@@ -216,7 +220,7 @@ function MorphologySection() {
       <div className="shell">
         <RobotReveal className="robot-section-heading">
           <p className="eyebrow">MORPHOLOGY / 形态选择</p>
-          <h2>面向不同的<br />机器人作业场景。</h2>
+          <h2 className="safe-break-title"><span>面向不同的</span><span>机器人作业场景。</span></h2>
           <p>双足适配人类工位，四足面向复杂地形，纯轮式突出结构化场地中的移动效率与双臂作业空间。</p>
         </RobotReveal>
         <div className="robot-morphology-grid">
@@ -248,7 +252,7 @@ function ComparisonSection() {
         <RobotReveal className="robot-section-heading comparison-heading">
           <div>
             <p className="eyebrow">CROSS-COMPANY COMPARISON</p>
-            <h2>四家公司<br />横向对比。</h2>
+            <h2 className="safe-break-title"><span>主流机器人产品</span><span>横向对比。</span></h2>
           </div>
           <p>核心差异集中在模型路线、运动控制、结构形态和工程化重点。表内字段保持同一比较口径。</p>
         </RobotReveal>
@@ -295,7 +299,7 @@ function ConclusionSection() {
       <div className="shell">
         <RobotReveal className="robot-section-heading light-heading">
           <p className="eyebrow light">SYNTHESIS / 综合结论</p>
-          <h2>四家公司核心能力<br />与适用场景总结。</h2>
+          <h2 className="safe-break-title"><span>核心能力</span><span>与适用场景总结。</span></h2>
           <p>从大模型与任务规划、运动控制、机械结构和工程化资料，归纳各公司的重点能力与更适合优先验证的作业场景。</p>
         </RobotReveal>
         <div className="robot-conclusion-grid">
@@ -326,7 +330,7 @@ export default function RobotBenchmark() {
         <div className="robot-cover-scrim" />
         <div className="shell robot-cover-copy">
           <p className="eyebrow light">MODULE 03 / EMBODIED INTELLIGENCE</p>
-          <h1>机器人<br />能力与产品对标</h1>
+          <h1 className="safe-break-title"><span>机器人能力</span><span>与产品对标</span></h1>
           <p>宇树科技、智元机器人、云深处科技、银河通用</p>
           <div className="robot-cover-facts"><span><b>4</b><small>家公司</small></span><span><b>3</b><small>层能力框架</small></span><span><b>3</b><small>类本体形态</small></span></div>
         </div>

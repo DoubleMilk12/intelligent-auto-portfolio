@@ -21,7 +21,7 @@ export const robotFramework = [
     label: "机械结构",
     english: "EMBODIMENT",
     summary: "通过形态、自由度、执行器、传动、传感器、末端、载荷和防护能力定义任务边界。",
-    detail: "双足、四足与纯轮式面向不同任务，不用单一参数排序，而是判断结构能否支撑目标场景。",
+    detail: "双足、四足、轮足与纯轮式面向不同任务，不用单一参数排序，而是判断结构能否支撑目标场景。",
   },
 ];
 
@@ -31,14 +31,13 @@ export const robotCompanies = [
     index: "01",
     name: "宇树科技",
     english: "UNITREE",
-    focus: "足式本体与开放运控生态",
-    morphologies: ["双足", "四足"],
+    focus: "多形态本体与开放运控生态",
+    morphologies: ["双足", "四足", "轮式 / 轮足"],
     hero: "/assets/robot/unitree-g1-product.png",
-    secondary: "/assets/robot/unitree-go2-cutout.png",
+    secondary: "/assets/robot/unitree-g1d-product.png",
     railImage: "/assets/robot/unitree-g1-cutout.png",
-    summary: "以高性能腿足本体、较低二次开发门槛和强化学习工具链形成产品优势，双足与四足产品密度高。",
-    strength: "从 Isaac Gym / RSL-RL 训练、MuJoCo Sim2Sim 到实机部署的路径清晰，SDK2 提供底层状态与控制接口。",
-    boundary: "未形成纯轮式产品线；默认任务规划模型与商用底层控制器的公开细节有限，平台算力不能直接替代任务成功率。",
+    summary: "产品覆盖双足、四足、轮式移动操作与轮足四足：G1-D 采用轮式升降底盘，B2-W 以轮足结构兼顾速度、载荷和复杂地形通过性。",
+    strength: "腿足产品打通 Isaac Gym / RSL-RL、MuJoCo 与实机部署；G1-D 则把轮式移动操作、数据采集、模型训练和 WMA-0 部署组织为同一套开发链路。",
     brain: {
       title: "UnifoLM-WMA-0 / VLA-0",
       copy: "WMA-0 通过世界模型预测机器人与环境的后续状态，并为动作策略提供物理交互信息；VLA-0 则面向通用人形操作，把视觉与语言指令转换为动作。",
@@ -49,8 +48,8 @@ export const robotCompanies = [
       copy: "Go2、G1、H1 与 H1-2 可在官方 RL Gym 中训练，再经 Play / MuJoCo 校验后部署到实机。G1 支持力位混合，Dex3-1 可选触觉。",
       evidence: "优势集中在腿足运动控制与开发生态，实际控制频率、安全限值和量产策略需按 SDK 版本核对。",
     },
-    body: "G1 / G1 EDU 站立高度约 1320 mm、整机约 35 kg，基础版 23 个关节电机，EDU 版本可扩展至 43 个；双足产品之外，A2 与 Go2 分别覆盖工业和消费级四足任务。",
-    products: ["H2", "G1 EDU", "A2", "Go2"],
+    body: "G1 / G1 EDU 面向人形科研与二次开发，A2、Go2 覆盖工业和消费级四足任务；G1-D 通过双轮差速底盘与升降立柱形成 0–2 m 垂直工作空间，B2-W 则保留多关节腿部并以轮足提升长距离运输效率。",
+    products: ["H2", "G1 EDU", "A2", "Go2", "G1-D", "B2-W"],
     endEffectors: [
       {
         kind: "灵巧手",
@@ -65,6 +64,7 @@ export const robotCompanies = [
     sources: [
       ["G1 官方参数", "https://www.unitree.com/mobile/g1/"],
       ["G1-D 与 WMA-0", "https://www.unitree.com/mobile/G1-D/"],
+      ["B2-W 官方参数", "https://www.unitree.com/cn/mobile/b2-w/"],
       ["官方开源项目", "https://www.unitree.com/mobile/opensource/"],
     ],
   },
@@ -214,7 +214,7 @@ export const robotMorphologies = [
     strength: "越障、防护与载荷稳定性",
     scenarios: "复杂地形、工业巡检、应急救援、室外运输与危险区域作业。",
     cost: "操作能力通常依赖外挂机械臂，狭窄人类工位与精细双臂任务不是结构强项。",
-    examples: "A2 / Go2 / D1 Ultra / X30 / Lite3",
+    examples: "A2 / Go2 / B2-W / D1 Ultra / X30 / Lite3",
   },
   {
     id: "wheeled",
@@ -224,16 +224,16 @@ export const robotMorphologies = [
     strength: "导航效率、续航与双臂工作空间",
     scenarios: "零售拣选、仓储搬运、工业上下料和结构化室内长时间作业。",
     cost: "台阶、碎石和非结构化地形通过性有限，对场地连续性和导航基础设施依赖更强。",
-    examples: "精灵 G1 / G2 / Galbot G1 / S1",
+    examples: "G1-D / 精灵 G1 / G2 / Galbot G1 / S1",
   },
 ];
 
 export const robotComparisonRows = {
   coverage: [
-    ["形态覆盖", "双足、四足", "双足、四足、纯轮式", "双足、四足、轮足边界", "纯轮式"],
-    ["核心定位", "腿足本体与开放运控", "全形态与全栈工具链", "复杂地形与工业防护", "轮式移动操作与垂直落地"],
-    ["代表产品", "H2 / G1 / A2 / Go2", "A3 / X2 / D1 / 精灵 G1/G2", "DR02 / X30 / M20", "Galbot G1 / S1"],
-    ["适合优先验证", "腿足运动、科研与二开", "跨形态产品组合与工具链", "巡检、救援与复杂地形", "零售、仓储与工业移动操作"],
+    ["形态覆盖", "双足、四足、轮式升降、轮足四足", "双足、四足、纯轮式", "双足、四足、轮足边界", "纯轮式"],
+    ["核心定位", "多形态本体与开放运控", "全形态与全栈工具链", "复杂地形与工业防护", "轮式移动操作与垂直落地"],
+    ["代表产品", "H2 / G1 / A2 / G1-D / B2-W", "A3 / X2 / D1 / 精灵 G1/G2", "DR02 / X30 / M20", "Galbot G1 / S1"],
+    ["适合优先验证", "腿足运动、轮式数采、工业运输与二开", "跨形态产品组合与工具链", "巡检、救援与复杂地形", "零售、仓储与工业移动操作"],
   ],
   intelligence: [
     ["大模型与任务规划", "UnifoLM-WMA-0 / VLA-0", "GO-2 Action CoT：低频语义规划与高频动作系统", "DeepVLA：语义点云与语言模型导航", "GraspVLA：自动回归感知与 Flow Matching"],
@@ -242,10 +242,10 @@ export const robotComparisonRows = {
     ["仍需项目验证", "默认任务规划模型与商用控制细节", "各 SKU 默认能力与安全限值", "通用操作 VLA 与量产控制细节", "长程生产指标与内部伺服实现"],
   ],
   structure: [
-    ["执行结构", "高扭矩腿足关节；可选灵巧手", "双足 / 四足 / 全向轮式；多类末端", "腿足关节、宽温与工业防护", "全向底盘、长臂展、双臂与模块化末端"],
+    ["执行结构", "高扭矩腿足关节；G1-D 轮式升降底盘；B2-W 轮足结构", "双足 / 四足 / 全向轮式；多类末端", "腿足关节、宽温与工业防护", "全向底盘、长臂展、双臂与模块化末端"],
     ["感知与算力", "深度、3D 激光雷达与可选 Orin", "RGB-D、多 RGB、雷达、力矩；Orin / RK3588", "激光雷达、深度、广角与最高 275 TOPS 配置", "立体视觉、多 RGB、腕部深度、力传感、雷达与 AGX Orin"],
-    ["续航与维护", "G1 约 2 h；A2 空载约 5 h", "约 2 h 至 4 h+；部分支持换电", "DR02 换电；X30 约 2.5–4 h", "G1 / S1 约 8 h；S1 双电池快换"],
-    ["工程化重点", "开发门槛和运动生态", "平台覆盖和配置组合", "IP66 / IP67、宽温与救援", "续航、载荷、工作空间和任务闭环"],
+    ["续航与维护", "G1 约 2 h；G1-D 旗舰版约 6 h；B2-W 空载最大约 30 km", "约 2 h 至 4 h+；部分支持换电", "DR02 换电；X30 约 2.5–4 h", "G1 / S1 约 8 h；S1 双电池快换"],
+    ["工程化重点", "运动生态、跨形态数据与二次开发", "平台覆盖和配置组合", "IP66 / IP67、宽温与救援", "续航、载荷、工作空间和任务闭环"],
   ],
 };
 
@@ -254,6 +254,8 @@ export const robotProducts = [
   ["宇树", "G1 EDU", "双足", "23–43 DOF / 约 35 kg+", "Dex3-1 可选触觉；深度相机 + 3D 激光雷达", "科研、数据采集与二次开发"],
   ["宇树", "A2", "四足", "12 DOF / 约 42 kg", "持续行走载荷约 25 kg；IP56；空载约 5 h", "工业运输与复杂地形"],
   ["宇树", "Go2", "四足", "12 DOF / 约 15 kg", "4D 激光雷达 + 广角相机；约 1–2 h", "消费、教育与开发"],
+  ["宇树", "G1-D 旗舰版", "轮式升降", "19 DOF（不含末端）/ 约 90 kg", "双轮差速；最高 1.5 m/s；0–2 m 垂直工作空间；约 6 h", "数据采集、模型训练与移动操作"],
+  ["宇树", "B2-W", "轮足四足", "约 85 kg / IP67", "最高 15 km/h；40 kg 负载最大续航 25 km；轮最大扭矩 40 Nm", "工业运输、巡检与复杂地形"],
   ["智元", "远征 A3", "双足", "约 173 cm / 55 kg", "颈2、双臂7×2、双腿6×2、腰3；手部可选灵动款或专业款；续航10 h", "通用人形与操作"],
   ["智元", "灵犀 X2 Ultra", "双足", "30 DOF / 约 39 kg", "3D 雷达、RGB-D、多 RGB；RK3588×2 + Orin NX", "轻量人形与交互"],
   ["智元", "绝尘 D1 Ultra", "四足", "12 DOF / 约 16 kg", "最高 3.7 m/s；IP54；可选雷达 / 深度 / 5G", "巡检、教学与开发"],
@@ -270,6 +272,8 @@ export const robotProductImages = {
   "宇树-G1 EDU": "/assets/robot/thumb-unitree-g1.png",
   "宇树-A2": "/assets/robot/thumb-unitree-a2.png",
   "宇树-Go2": "/assets/robot/thumb-unitree-go2.png",
+  "宇树-G1-D 旗舰版": "/assets/robot/thumb-unitree-g1d-cutout.png",
+  "宇树-B2-W": "/assets/robot/thumb-unitree-b2w.png",
   "智元-远征 A3": "/assets/robot/thumb-agibot-a3.png",
   "智元-灵犀 X2 Ultra": "/assets/robot/thumb-agibot-x2.png",
   "智元-绝尘 D1 Ultra": "/assets/robot/thumb-agibot-d1.png",
@@ -282,7 +286,7 @@ export const robotProductImages = {
 };
 
 export const robotConclusions = [
-  ["宇树科技", "腿足运动与开发生态", "需要高动态本体、强化学习验证和较低二次开发门槛的团队"],
+  ["宇树科技", "多形态本体与开放运控生态", "需要验证腿足运动、轮式移动操作、工业运输和二次开发链路的团队"],
   ["智元机器人", "多形态产品与数据、仿真、模型协同工具链", "需要在多形态产品中复用数据、仿真和模型能力的项目"],
   ["云深处科技", "复杂地形、工业防护与纵向闭环", "面对巡检、救援、宽温和高防护环境的工业项目"],
   ["银河通用", "轮式移动操作与垂直产品化", "关注长续航、双臂工作空间和零售 / 工业任务闭环的场景"],
