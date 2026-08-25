@@ -41,7 +41,7 @@ import {
   WarningOctagon,
   X,
 } from "@phosphor-icons/react";
-import { acceptanceRows, adasRows, appendix, chapterGroups, checks, cockpitRows, competitorRows, degradationCases, designImplications, dmsDeliveryStages, dmsDriverStateFlow, dmsMetricGroups, dmsPriorityGroups, dmsSystemStateFlow, dmsTrackingEvents, driverStates, escalationRows, eventFields, gazeZones, hmiStates, monitoringRows, qualityRules, remotePermissions, scenarios, startupFaults, systemLayers, ttsRows, vehicles } from "./data";
+import { acceptanceRows, adasRows, appendix, chapterGroups, checks, cockpitRows, competitorRows, degradationCases, designImplications, dmsCoreTrackingFlow, dmsDeliveryStages, dmsDriverStateFlow, dmsMetricGroups, dmsPriorityGroups, dmsSystemStateFlow, driverStates, escalationRows, eventFields, gazeZones, hmiStates, monitoringRows, qualityRules, remotePermissions, scenarios, startupFaults, systemLayers, ttsRows, vehicles } from "./data";
 import RobotBenchmark from "./RobotBenchmark";
 
 const ease = [0.22, 1, 0.36, 1];
@@ -159,10 +159,10 @@ const levelThreeTone = {
   vibration: [150, 55, 150, 55, 150, 90, 260],
 };
 
-function playAlertTone(level) {
+function playAlertTone(level, sharedContext = null) {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
   if (!AudioContext) return 0;
-  const context = new AudioContext();
+  const context = sharedContext || new AudioContext();
   const master = context.createGain();
   const compressor = context.createDynamicsCompressor();
   master.gain.value = level === 3 ? 0.9 : 0.92;
@@ -215,7 +215,7 @@ function playAlertTone(level) {
     navigator.vibrate(level === 1 ? [90, 80, 90] : level === 2 ? [180, 90, 180] : levelThreePreset.vibration);
   }
   const totalMs = Math.ceil((0.04 + (count - 1) * gap + duration + 0.24) * 1000);
-  window.setTimeout(() => context.close(), totalMs + 180);
+  if (!sharedContext) window.setTimeout(() => context.close(), totalMs + 180);
   return totalMs;
 }
 
@@ -811,12 +811,21 @@ function Timeline() {
   const reducedMotion = useReducedMotion();
   const frameRef = useRef(null);
   const startedAtRef = useRef(0);
+  const audioContextRef = useRef(null);
+  const audioArmedRef = useRef(false);
+  const playedToneLevelsRef = useRef(new Set());
   const scenario = scenarios[scenarioKey];
   const max = Math.max(...scenario.points.map(([time]) => time), 1);
   const elapsed = (progress / 100) * max;
   const currentPoint = scenario.points.reduce((latest, point) => point[0] <= elapsed ? point : latest, scenario.points[0]);
-  const currentIndex = Math.max(0, scenario.points.findIndex((point) => point === currentPoint));
-  const severity = currentIndex <= 1 ? "monitoring" : currentIndex === 2 ? "level-one" : currentIndex === 3 ? "level-two" : "level-three";
+  const currentLabel = currentPoint[1];
+  const severity = currentLabel.includes("RMF") || currentLabel.includes("DCA") || currentLabel.includes("安全停车")
+    ? "level-three"
+    : currentLabel.includes("二级提醒") || currentLabel.includes("产品强提醒")
+      ? "level-two"
+      : currentLabel.includes("一级提醒")
+        ? "level-one"
+        : "monitoring";
   const sceneMeta = scenarioSceneMeta[scenarioKey] || scenarioSceneMeta.hands;
   const sceneMotionX = scenarioKey === "gaze" || scenarioKey === "both" ? -7 : -3;
   const simulationDuration = 6800;
@@ -824,8 +833,15 @@ function Timeline() {
   useEffect(() => {
     setPlaying(false);
     setProgress(0);
+    audioArmedRef.current = false;
+    playedToneLevelsRef.current.clear();
     window.cancelAnimationFrame(frameRef.current);
   }, [scenarioKey, recovered, monitor]);
+
+  useEffect(() => () => {
+    window.cancelAnimationFrame(frameRef.current);
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") audioContextRef.current.close();
+  }, []);
 
   useEffect(() => {
     if (!playing) return undefined;
@@ -846,6 +862,15 @@ function Timeline() {
     return () => window.cancelAnimationFrame(frameRef.current);
   }, [playing, reducedMotion]);
 
+  useEffect(() => {
+    if (!audioArmedRef.current || !audioContextRef.current) return;
+    const label = currentPoint[1];
+    const toneLevel = label.includes("一级提醒") ? 1 : label.includes("二级提醒") || label.includes("产品强提醒") ? 2 : label.includes("DCA") || label.includes("RMF") ? 3 : 0;
+    if (!toneLevel || playedToneLevelsRef.current.has(toneLevel)) return;
+    playedToneLevelsRef.current.add(toneLevel);
+    playAlertTone(toneLevel, audioContextRef.current);
+  }, [currentPoint]);
+
   const toggleSimulation = () => {
     if (!monitor || recovered) return;
     if (playing) {
@@ -853,7 +878,16 @@ function Timeline() {
       return;
     }
     const startProgress = progress >= 100 ? 0 : progress;
-    if (progress >= 100) setProgress(0);
+    if (!audioContextRef.current || audioContextRef.current.state === "closed") {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) audioContextRef.current = new AudioContext();
+    }
+    if (audioContextRef.current?.state === "suspended") audioContextRef.current.resume();
+    audioArmedRef.current = true;
+    if (progress >= 100) {
+      setProgress(0);
+      playedToneLevelsRef.current.clear();
+    }
     startedAtRef.current = performance.now() - (startProgress / 100) * simulationDuration;
     setPlaying(true);
   };
@@ -861,6 +895,8 @@ function Timeline() {
   const resetSimulation = () => {
     setPlaying(false);
     setProgress(0);
+    audioArmedRef.current = false;
+    playedToneLevelsRef.current.clear();
     window.cancelAnimationFrame(frameRef.current);
   };
 
@@ -914,13 +950,17 @@ function Timeline() {
                 <button type="button" onClick={toggleSimulation} aria-label={playing ? "暂停模拟" : progress >= 100 ? "重新播放模拟" : "播放模拟"}>{playing ? <Pause size={18} weight="fill" /> : <Play size={18} weight="fill" />}{playing ? "暂停" : progress >= 100 ? "重播" : "开始模拟"}</button>
                 <button type="button" className="reset-simulation" onClick={resetSimulation} aria-label="重置模拟"><ArrowCounterClockwise size={18} /></button>
               </div>
+              <small className="simulator-sound-note"><SpeakerHigh size={15} />提醒节点同步播放提示音</small>
             </div>
 
             <div className="timeline-progress" aria-label={`当前模拟进度 ${Math.round(progress)}%`}>
               <motion.span className="timeline-progress-fill" animate={{ width: `${progress}%` }} transition={{ duration: 0.08, ease: "linear" }} />
               {scenario.points.map(([time, label], index) => {
                 const pointProgress = (time / max) * 100;
-                return <span className={`progress-stop ${progress >= pointProgress ? "reached" : ""} stop-${index}`} style={{ left: `${pointProgress}%` }} key={`${time}-${label}`}><i /><small>{time === 0 ? "T0" : `${time}s`}</small><b>{label}</b></span>;
+                const previousProgress = index > 0 ? (scenario.points[index - 1][0] / max) * 100 : -100;
+                const denseStop = index > 0 && pointProgress - previousProgress < 8;
+                const edgeClass = pointProgress < 4 ? "edge-start" : pointProgress > 96 ? "edge-end" : "";
+                return <span className={`progress-stop ${progress >= pointProgress ? "reached" : ""} ${denseStop ? "dense-stop" : ""} ${edgeClass} stop-${index}`} style={{ left: `${pointProgress}%` }} key={`${time}-${label}`}><i /><small>{time === 0 ? "T0" : `${time}s`}</small><b>{label}</b></span>;
               })}
             </div>
           </div>
@@ -995,7 +1035,12 @@ function Accordion({ item, open, onToggle }) {
         <span>{item.title}</span>{open ? <Minus /> : <Plus />}
       </button>
       <AnimatePresence initial={false}>
-        {open && <motion.div className="accordion-panel" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.45, ease }}><p>{item.body}</p></motion.div>}
+        {open && <motion.div className="accordion-panel" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.45, ease }}>
+          <p>{item.body}</p>
+          {item.clauses && <div className="regulation-clause-grid">
+            {item.clauses.map((clause) => <article key={clause.code}><b>{clause.code}</b><span>{clause.text}</span></article>)}
+          </div>}
+        </motion.div>}
       </AnimatePresence>
     </div>
   );
@@ -1005,8 +1050,6 @@ function DmsModule() {
   const [openIndex, setOpenIndex] = useState(0);
   const [activeOverview, setActiveOverview] = useState("check");
   const [activeDegradation, setActiveDegradation] = useState(0);
-  const [activeTrackingEvent, setActiveTrackingEvent] = useState(0);
-  const trackingEvent = dmsTrackingEvents[activeTrackingEvent];
   const overviewGroups = [
     {
       code: "01 / 识别与判定",
@@ -1171,10 +1214,10 @@ function DmsModule() {
           </div>
           <div className="threshold-governance">
             <span><b>01 / 产品确认阈值</b><small>2 s 为本 PRD 的算法确认初值，不等同于法规规定的提醒时刻</small></span>
-            <span><b>02 / 视线脱离上限</b><small>UN R171：车速大于 10 km/h，持续视觉脱离最迟 5 s 发出 EOR</small></span>
-            <span><b>03 / 手部离盘上限</b><small>UN R171：持续手部脱离 5 s 发出 HOR；仅在确认视线有效时可再延后最多 5 s</small></span>
+            <span><b>02 / HOR 产品阈值</b><small>按车速与视线状态在 T+3 / 5 / 8 s 发出一级 HOR；一级后 8 s 升级，且不超过法规 10 s 上限</small></span>
+            <span><b>03 / EOR 产品阈值</b><small>T+3 s 发出一级 EOR，T+6 s 升为二级；二级后最迟 5 s 发出 DCA</small></span>
           </div>
-          <a className="regulation-reference" href="https://unece.org/sites/default/files/2025-03/R171e.pdf" target="_blank" rel="noreferrer">UN Regulation No. 171 · 5.5.4.2.6 <ArrowUpRight size={15} /></a>
+          <span className="regulation-reference">GB 47955—2026《智能网联汽车 组合驾驶辅助系统安全要求》· 4.8.3.1—4.8.3.2</span>
         </Reveal>
 
         <Reveal id="dms-monitoring" className="monitoring-section">
@@ -1211,7 +1254,7 @@ function DmsModule() {
         <Reveal className="escalation-section">
           <div className="section-heading split-heading compact-heading">
             <div><p className="eyebrow">ESCALATION ROUTE</p><h2 className="safe-break-title"><span>一张路线图，</span><span>看清所有升级节点。</span></h2></div>
-            <p>2 s 是产品侧异常确认初值。提醒时限按 UN R171 校核：EOR 最迟 5 s；HOR 原则上 5 s，仅在持续确认视线有效时允许延后，且延后不超过 5 s。</p>
+            <p>所有阶段从原始异常时刻起算。HOR 根据车速与视线状态在 T+3 / 5 / 8 s 发出一级提醒；EOR 在 T+3 s 发出一级提醒。持续异常时，HOR 在一级后 8 s 升级且不超过法规 10 s 上限，EOR 在一级后 3 s 升级。</p>
           </div>
           <div className="escalation-route" role="list" aria-label="DMS 分级提醒路线">
             {escalationRows.map(([title, trigger, hmi, next], index) => {
@@ -1286,31 +1329,16 @@ function DmsModule() {
       <div id="dms-measurement" className="dms-measurement section-space">
         <div className="shell">
           <Reveal className="section-heading split-heading light-heading">
-            <div><p className="eyebrow light">METRICS / TRACKING</p><h2 className="safe-break-title"><span>用结果指标验证安全，</span><span>用过程事件定位问题。</span></h2></div>
-            <p>指标覆盖安全结果、过程质量、误报体验与数据约束；事件从监测可用性、驾驶员状态一路关联到 RMF 和 SOS，支持按车型、版本与场景回放。</p>
+            <div><p className="eyebrow light">METRICS / TRACKING</p><h2>核心指标与埋点。</h2></div>
+            <p>回答三个问题：DMS 与两条监测通道是否成功开启，提醒后驾驶员是否恢复，以及持续无响应后是否升级至 SOS。</p>
           </Reveal>
+          <Reveal className="tracking-mode-note"><ShieldCheck size={22} /><p><b>按状态跃迁记录事件。</b>DMS、眼部监测和方向盘监测从 0 变为 1 时各记录一次开启事件；保持开启不重复上报。眼部与方向盘是并行监测通道，不按用户可自由关闭的开关处理，开启率分别按车型应配置通道计算。</p></Reveal>
           <div className="dms-metric-grid">
             {dmsMetricGroups.map((group, index) => <Reveal className="dms-metric-card" delay={index * .06} key={group.code}><div className="metric-card-head"><span>{group.code}</span><h3>{group.title}</h3><p>{group.summary}</p></div><div className="metric-list">{group.metrics.map(([name, unit, definition]) => <article key={name}><div><b>{name}</b><small>{unit}</small></div><p>{definition}</p></article>)}</div></Reveal>)}
           </div>
-          <Reveal className="tracking-explorer">
-            <div className="tracking-explorer-head"><div><span>EVENT DICTIONARY</span><h3>核心事件与验收口径</h3></div><p>事件名称、触发、字段、上传、隐私和验收使用同一份字典，避免开发、测试与数据分析各自解释。</p></div>
-            <div className="tracking-layout">
-              <div className="tracking-tabs" role="tablist" aria-label="选择 DMS 核心埋点事件">
-                {dmsTrackingEvents.map((event, index) => <button id={`tracking-tab-${index}`} key={event.id} role="tab" aria-selected={activeTrackingEvent === index} aria-controls="tracking-event-panel" className={activeTrackingEvent === index ? "active" : ""} onPointerEnter={() => setActiveTrackingEvent(index)} onFocus={() => setActiveTrackingEvent(index)} onClick={() => setActiveTrackingEvent(index)}><span>{String(index + 1).padStart(2, "0")}</span><b>{event.title}</b><small>{event.id}</small></button>)}
-              </div>
-              <AnimatePresence mode="wait">
-                <motion.article id="tracking-event-panel" role="tabpanel" aria-labelledby={`tracking-tab-${activeTrackingEvent}`} key={trackingEvent.id} className="tracking-event-panel" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: .35, ease }}>
-                  <div className="tracking-event-title"><span>ACTIVE EVENT</span><h4>{trackingEvent.id}</h4><p>{trackingEvent.title}</p></div>
-                  <dl>
-                    <div><dt>触发条件</dt><dd>{trackingEvent.trigger}</dd></div>
-                    <div><dt>关键字段</dt><dd>{trackingEvent.fields}</dd></div>
-                    <div><dt>上报策略</dt><dd>{trackingEvent.policy}</dd></div>
-                    <div><dt>隐私约束</dt><dd>{trackingEvent.privacy}</dd></div>
-                    <div><dt>验收口径</dt><dd>{trackingEvent.acceptance}</dd></div>
-                  </dl>
-                </motion.article>
-              </AnimatePresence>
-            </div>
+          <Reveal className="tracking-core-flow">
+            <div className="tracking-core-head"><div><span>CORE EVENT FLOW</span><h3>四类事件完成指标计算</h3></div><p>开启类事件采用 0→1 边沿触发；提醒、恢复和 SOS 通过同一异常周期 ID 关联，循环播报不重复计数。</p></div>
+            <ol>{dmsCoreTrackingFlow.map((item, index) => <li key={item.event}><span>{item.code}</span><h4>{item.title}</h4><code>{item.event}</code><p>{item.note}</p><div>{item.fields.map((field) => <small key={field}>{field}</small>)}</div>{index < dmsCoreTrackingFlow.length - 1 && <ArrowRight aria-hidden="true" />}</li>)}</ol>
           </Reveal>
         </div>
       </div>

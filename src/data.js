@@ -445,92 +445,64 @@ export const dmsSystemStateFlow = [
 export const dmsMetricGroups = [
   {
     code: "01",
-    title: "安全结果",
-    summary: "衡量系统是否真正减少风险，以及车辆能否完成最小风险处置。",
+    title: "功能开启",
+    summary: "以功能状态从 0 变为 1 的启动事件为基础，统计 DMS 及车型已配置监测通道的实际开启情况。",
     metrics: [
-      ["高风险事件率", "次 / 1 亿公里", "按车型、软件版本、道路类型与辅助驾驶状态分层比较"],
-      ["RMF 安全停车成功率", "成功事件 / RMF 事件", "完成减速、选区、停车、驻车与双闪才计为成功"],
-      ["DCA / RMF 后险情率", "次 / 处置事件", "记录进入车辆介入后仍发生的碰撞、急避险或人工强制接管"],
+      ["DMS 开启率", "DMS 开启成功次数 / DMS 应开启次数", "开启条件由不满足变为满足时形成一次应开启事件；DMS 随后从 0 变为 1 记为开启成功，同一会话持续开启不重复计数"],
+      ["眼部监测开启率", "眼部通道开启次数 / 眼部通道应开启次数", "仅统计配置眼部监测的车辆；通道从 0 变为 1 记一次，失败时记录遮挡、暗光、佩戴物或摄像头故障原因"],
+      ["方向盘监测开启率", "方向盘通道开启次数 / 方向盘通道应开启次数", "仅统计配置方向盘监测的车辆；电容方向盘或转向输入监测从 0 变为 1 记一次，并记录实际硬件类型"],
     ],
   },
   {
     code: "02",
-    title: "过程质量",
-    summary: "定位识别、提醒、车辆处置和救援链路中具体哪一段需要优化。",
+    title: "提醒与恢复",
+    summary: "围绕一次异常周期记录告警触发、驾驶员恢复和复核结果，避免同一提醒被重复计数。",
     metrics: [
-      ["DMS 可用率", "可用时长 / 应监测时长", "遮挡、暗光、超时与硬件故障分别统计，不合并为单一不可用"],
-      ["一级提醒恢复率", "恢复事件 / 一级提醒", "HOR 与 EOR 分开计算，并记录恢复用时分布"],
-      ["端到端告警时延", "P50 / P95 / P99", "从状态成立到 HMI、提示音与 TTS 实际输出"],
-      ["SOS 首次建联成功率", "成功请求 / 有网请求", "同时记录建联耗时、重试次数与失败原因"],
+      ["提醒触发次数", "去重后的提醒事件数", "异常周期首次进入提醒状态记一次；等级升级通过事件字段记录，不把循环播报重复计算"],
+      ["提醒后恢复率", "有效恢复次数 / 提醒事件数", "握盘、视线回归或有效接管动作满足解除条件时，从未恢复变为已恢复记一次"],
+      ["确认误报率", "确认误报次数 / 已复核提醒数", "真值来自受控测试标注、用户申诉和授权抽样复核；普通量产日志只能先标记疑似误报"],
     ],
   },
   {
     code: "03",
-    title: "体验与数据约束",
-    summary: "控制误报、重复提醒、数据成本和座舱隐私，避免安全能力制造新的干扰。",
+    title: "SOS 升级",
+    summary: "统计驾驶员持续无响应后升级救援的次数、比例，以及进入 SOS 前经历的提醒轮次。",
     metrics: [
-      ["无效提醒频次", "次 / 100 小时", "后视镜观察、短时查看导航与正常扫视单列复核"],
-      ["重复提醒率", "重复周期 / 异常事件", "检查状态抖动、解除过早和同一事件重复播报"],
-      ["单车上传量", "MB / 车·日", "安全事件全量上报，常规监测按策略抽样"],
-      ["敏感原始数据上传占比", "%", "默认端侧特征化；原始图像和语音仅在授权场景使用"],
+      ["持续无响应次数", "未恢复异常周期数", "提醒后仍未检测到有效握盘、视线回归或接管动作的异常周期数量"],
+      ["SOS 触发率", "SOS 触发次数 / 持续无响应次数", "驾驶员持续无响应并从未触发变为触发 SOS 时记一次，重复建联不新增触发次数"],
+      ["SOS 前提醒次数", "平均值 / P90", "统计同一异常周期进入 SOS 前实际经历的提醒轮次，用于检查升级节奏是否合理"],
     ],
   },
 ];
 
-export const dmsTrackingEvents = [
+export const dmsCoreTrackingFlow = [
   {
-    id: "dms_monitor_availability_changed",
-    title: "监测可用性变化",
-    trigger: "DMS 在可用、部分降级与不可用之间切换时仅上报一次。",
-    fields: "from_state、to_state、reason_code、sensor_health、software_version、vehicle_speed、timestamp",
-    policy: "故障与恢复全量实时上报；相同原因连续抖动合并为一个事件周期。",
-    privacy: "不上传座舱原始图像；仅上传健康结果、原因码与质量评分。",
-    acceptance: "与健康状态源使用统一时钟；时序误差目标由系统工程在信号表中冻结。",
+    code: "01",
+    title: "DMS 开启判定",
+    event: "dms_enable_result",
+    note: "开启条件首次成立时记录一次判定；DMS 从 0 变为 1 记为成功，否则保留失败原因。",
+    fields: ["eligible_edge", "from_state", "to_state", "result", "reason"],
   },
   {
-    id: "dms_driver_state_changed",
-    title: "驾驶员状态变化",
-    trigger: "驾驶员状态完成确认，或从异常状态恢复时上报。",
-    fields: "from_state、to_state、evidence_set、confidence、gaze_region、hands_state、recovery_reason、timestamp",
-    policy: "异常转移全量；正常状态只记录进入与恢复，不持续刷点。",
-    privacy: "以状态、置信度和区域编码代替人脸、眼部原始数据。",
-    acceptance: "事件状态与车端决策状态一致，并可还原同一异常周期的开始、升级和解除。",
+    code: "02",
+    title: "通道开启",
+    event: "dms_channel_enabled",
+    note: "眼部或方向盘监测通道从 0 变为 1 时分别记录，并保留车型配置。",
+    fields: ["channel", "from_state", "to_state", "hardware_type"],
   },
   {
-    id: "dms_warning_triggered",
-    title: "分级提醒触发",
-    trigger: "HOR、EOR、组合提醒、DCA、RMF 或 SOS 首次展示及等级升级时上报。",
-    fields: "warning_type、warning_level、source_state、hmi_content_id、sound_id、tts_id、haptic_id、timestamp",
-    policy: "每次等级变化上报；重复播放只累计 repeat_count。",
-    privacy: "不包含录音，仅记录声音与 TTS 资源 ID。",
-    acceptance: "HMI、声音、TTS 与触觉均能通过同一 event_id 对齐回放。",
+    code: "03",
+    title: "提醒周期",
+    event: "dms_warning_cycle_closed",
+    note: "一次异常周期只形成一条主记录，汇总提醒、恢复与复核结果。",
+    fields: ["warning_count", "recovered", "response_time", "review_label"],
   },
   {
-    id: "dms_driver_recovered",
-    title: "驾驶员恢复响应",
-    trigger: "握盘、视线回归或合理转向 / 踏板操作满足对应解除条件时上报。",
-    fields: "recovery_action、source_warning、response_latency、hands_duration、gaze_duration、valid_operation、timestamp",
-    policy: "一个异常周期只确认一次有效恢复；轻触、瞬时扫视不计入。",
-    privacy: "仅保留动作类型、持续时间和时延。",
-    acceptance: "恢复事件必须引用原 warning_event_id，支持计算分等级恢复率。",
-  },
-  {
-    id: "rmf_lifecycle_changed",
-    title: "RMF 生命周期",
-    trigger: "DCA、RMF 启动、目标选择、减速、停车、驻车及失败阶段变化时上报。",
-    fields: "rmf_stage、road_type、target_type、speed、deceleration、lane_state、parking_result、failure_reason、timestamp",
-    policy: "关键状态变化实时全量上报；高频车辆信号按安全事件窗口采样。",
-    privacy: "位置仅保留安全处置与救援所需精度，并执行访问审计。",
-    acceptance: "一次 RMF 使用同一 trace_id，可按时间顺序完整还原车端处置。",
-  },
-  {
-    id: "sos_connection_result",
-    title: "SOS 建联结果",
-    trigger: "创建请求、首次建联、重试、坐席受理、救援转派与结束时上报。",
-    fields: "network_state、attempt_no、connection_latency、operator_result、rescue_result、end_reason、timestamp",
-    policy: "全量实时上报；网络失败时本地缓存，恢复后补传。",
-    privacy: "通话内容不进入产品分析事件；坐席访问与导出操作单独审计。",
-    acceptance: "远程失败不能改变 RMF trace 状态，且补传后不产生重复工单。",
+    code: "04",
+    title: "SOS 触发",
+    event: "dms_sos_triggered",
+    note: "SOS 状态从 0 变为 1 时记录一次；后续重试只更新建联结果。",
+    fields: ["warnings_before_sos", "no_response_time", "connect_result"],
   },
 ];
 
@@ -574,33 +546,33 @@ export const competitorRows = [
 export const scenarios = {
   hands: {
     label: "手部离盘",
-    note: "UN R171 要求持续手部脱离 5 s 发出 HOR；持续确认驾驶员视线有效时，允许延后最多 5 s。本 PRD 在该条件下取 8 s，并在继续离盘 8 s 后升级二级。",
-    points: [[0, "监测"], [2, "离盘确认"], [8, "一级提醒"], [16, "二级提醒"]],
+    note: "双手离开方向盘后持续 2 s 确认离盘，但计时从实际离盘时刻开始。一级 HOR 按风险分支触发：车速大于 80 km/h 为 T+3 s；10–80 km/h 且视线状态不可靠为 T+5 s；10–80 km/h 且持续确认视线正常为 T+8 s。一级后继续离盘 8 s 升为二级，且不得超过法规规定的 10 s 上限；二级后最迟 10 s 进入 RMF。下方演示采用 10–80 km/h、视线正常路径。",
+    points: [[0, "监测"], [2, "离盘确认"], [8, "一级提醒"], [16, "二级提醒"], [26, "RMF"]],
   },
   gaze: {
     label: "视线脱离",
-    note: "2 s 为产品异常确认初值，3 s 触发一级 EOR；UN R171 要求车速大于 10 km/h 时持续视觉脱离最迟 5 s 提醒。继续 3 s 升级二级，视线回归确认时间为 200 ms。",
-    points: [[0, "监测"], [2, "脱离确认"], [3, "一级提醒"], [6, "二级提醒"]],
+    note: "视线连续离开全部驾驶任务相关区域 2 s 后确认脱离，但计时从实际脱离时刻开始。本 PRD 在 T+3 s 发出一级 EOR，持续 3 s 后于 T+6 s 升为二级；二级后最迟 5 s 进入 DCA。DCA 后目标 5 s、最迟 10 s 进入 RMF。视线回到任一有效区域并保持 200 ms 后解除。",
+    points: [[0, "监测"], [2, "脱离确认"], [3, "一级提醒"], [6, "二级提醒"], [11, "DCA"], [16, "RMF / SOS"]],
   },
   both: {
     label: "手眼同时脱离",
-    note: "原始异常持续 3 s 后直接进入二级提醒，以一条合并信息呈现，避免重复告警造成认知负担。",
-    points: [[0, "监测"], [3, "二级提醒"], [8, "DCA"], [13, "RMF / SOS"]],
+    note: "手部与视线同时脱离成立后，不分别播放 HOR 和 EOR。系统按原始异常时刻计时，在 T+3 s 直接进入二级组合提醒；持续无响应 5 s 后进入 DCA。DCA 后目标 5 s、最迟 10 s 进入 RMF，HMI 始终只呈现一套当前最高等级提醒。",
+    points: [[0, "监测"], [2, "组合确认"], [3, "二级提醒"], [8, "DCA"], [13, "RMF / SOS"]],
   },
   fatigue: {
     label: "疲劳",
-    note: "长闭眼或频繁长眨眼伴点头达到高风险后，从二级提醒起步；多信号持续且驾驶员无响应时进入 DCA。",
-    points: [[0, "监测"], [2, "高风险确认"], [2.2, "二级提醒"], [5.2, "DCA"], [10.2, "RMF / SOS"]],
+    note: "连续闭眼 2 s，或频繁长眨眼并伴随点头时，从二级提醒开始。若长闭眼、异常头姿、无有效转向或踏板操作等证据持续，且驾驶员对二级提醒 3 s 无响应，则进入疑似失能判断并触发 DCA；DCA 后目标 5 s、最迟 10 s 进入 RMF。",
+    points: [[0, "监测"], [2, "二级提醒"], [5, "DCA"], [10, "RMF / SOS"]],
   },
   sleep: {
     label: "疑似睡着",
-    note: "长闭眼、异常头姿、无有效操作三类证据中至少满足两类，且二级提醒后 3 s 无响应，则进入 DCA；DCA 目标 5 s、最迟 10 s 转 RMF。",
-    points: [[0, "证据融合"], [2, "二级提醒"], [5, "DCA"], [10, "RMF / SOS"]],
+    note: "连续闭眼 2 s 或长闭眼伴头部下垂时，从二级提醒开始。长闭眼、异常头姿、无有效操作三类证据中至少两类持续成立，且驾驶员对二级提醒 3 s 无响应时，判为疑似失能并进入 DCA；随后按 RMF 与 SOS 并行路径处置。",
+    points: [[0, "监测"], [2, "二级提醒"], [5, "DCA"], [10, "RMF / SOS"]],
   },
   incapacity: {
     label: "疑似失能",
-    note: "疑似失能优先级最高。车端启动稳定减速和安全停车，远程救援在同一事件中并行发起；远程连接失败不阻断车端 RMF。",
-    points: [[0, "疑似失能"], [0.2, "DCA"], [5, "RMF 减速"], [5, "SOS 并行"], [12, "安全停车"]],
+    note: "长闭眼、异常头姿、无有效转向或踏板操作三类证据中至少两类同时成立，并且驾驶员对二级强提醒 3 s 无响应且仍无法确认驾驶能力时，判为疑似失能并直接进入三级 DCA。车端 RMF 与远程 SOS 随后并行发起，远程连接失败不阻断车端安全处置。",
+    points: [[0, "证据融合"], [2, "二级提醒"], [5, "疑似失能 / DCA"], [10, "RMF / SOS"], [12, "安全停车"]],
   },
 };
 
@@ -613,29 +585,30 @@ export const checks = [
 ];
 
 export const driverStates = [
-  { key: "normal", index: "01", title: "正常 / 已恢复", level: "返回持续监测", trigger: "手部与视线均有效，未达到疲劳、睡着或失能条件，且关键输入可用。", recovery: "异常恢复需有效握盘连续 2 s、视线回归至少 200 ms；三级还需合理转向或踏板操作。" },
+  { key: "normal", index: "01", title: "正常 / 已恢复", level: "返回持续监测", trigger: "手部与视线均有效，未达到疲劳、睡着或失能条件，且关键输入可用。", recovery: "异常恢复需有效握盘连续 1 s、视线回归至少 200 ms；三级还需合理转向或踏板操作。" },
   { key: "hands", index: "02", title: "仅手部离盘", level: "HOR 链路", trigger: "双手均不满足触碰、握持或有效转向扭矩条件持续 2 s，视线仍有效。", recovery: "有效握盘连续 1 s 后解除；单次轻触不视为恢复。" },
   { key: "gaze", index: "03", title: "仅视线脱离", level: "EOR 链路", trigger: "视线连续离开前路、仪表 / HUD、后视镜与标定后的导航查看区 2 s，手部仍有效；正常扫视后视镜和短时查看导航不触发。", recovery: "视线回到任一有效区域至少 200 ms 后解除。" },
   { key: "both", index: "04", title: "手眼同时脱离", level: "组合提醒", trigger: "手部离盘与视线脱离在同一时间段同时成立，只输出一套组合提醒。", recovery: "两项都恢复才回到正常；只恢复一项时转入仍未恢复的单项状态。" },
-  { key: "fatigue", index: "05", title: "疲劳 / 疑似睡着", level: "从二级开始", trigger: "频繁长眨眼、打哈欠或连续点头用于判断疲劳；闭眼连续 2 s 或长闭眼伴头部下垂判为疑似睡着。", recovery: "睁眼、视线回归并出现有效操作后解除。" },
-  { key: "incapacity", index: "06", title: "疑似失能", level: "跳级进入 DCA", trigger: "长闭眼或异常头姿、无有效操作、对二级强提醒 3 s 无回应三类中至少两类成立。", recovery: "不诊断具体疾病；直接进入三级 DCA，并按时限启动 RMF 与 SOS。" },
+  { key: "fatigue", index: "05", title: "疲劳 / 疑似睡着", level: "从二级提醒开始", trigger: "频繁长眨眼并伴随点头用于判断疲劳；闭眼连续 2 s 或长闭眼伴头部下垂判为疑似睡着。", recovery: "睁眼、视线回归并出现有效转向或踏板操作后解除；持续无响应则进入疑似失能判断。" },
+  { key: "incapacity", index: "06", title: "疑似失能", level: "三级 DCA", trigger: "长闭眼、异常头姿、无有效转向或踏板操作三类证据中至少两类同时成立，并且对二级强提醒 3 s 无响应。", recovery: "不诊断具体疾病；直接进入三级 DCA，并启动 RMF 与 SOS。" },
   { key: "unavailable", index: "07", title: "监测不可用", level: "独立故障链", trigger: "镜头遮挡、强光 / 暗光导致置信度不足、视频流超时，或摄像头 / 红外 / 算法 / 固件自检失败，均需输出具体故障原因。", recovery: "不能把“看不清”当作驾驶员正常；清除故障后需重新通过系统健康确认。" },
 ];
 
 export const escalationRows = [
-  ["HOR 一级", "产品目标：>80 km/h 第 3 s，其他第 5 s；持续确认视线有效时可取第 8 s", "两声短音；请握住方向盘", "UN R171：首次 HOR 原则上不晚于 5 s；仅视线有效时可延后，最多再延后 5 s"],
-  ["EOR 一级", "产品目标第 3 s；法规校核上限为持续视觉脱离第 5 s", "两声短音；请注视前方", "UN R171：首次 EOR 后继续脱离，最迟 3 s 升级；回归 200 ms 后解除"],
-  ["手眼组合", "原始异常持续第 3 s", "只播放一套当前最高等级提示；请握住方向盘并注视前方", "不分别播放 HOR 与 EOR"],
-  ["二级强提醒", "单项持续或疲劳 / 疑似睡着", "三次强音、振动两次；请立即接管车辆", "无回应约每 2 s 重复；3～5 s 进入 DCA"],
-  ["DCA", "EOR 升级后无回应 3～5 s；高置信失能允许跳级", "三连急促告警与连续触觉；车辆即将减速", "UN R171：EOR 升级后最迟 5 s 出现 DCA；首次升级请求或告警后最迟 10 s 启动失能处置"],
-  ["RMF + SOS", "DCA 后持续无回应", "持续强警示并播报减速、寻找安全停车位置", "车端处置与远程建联并行，远程失败不阻断车端"],
+  ["HOR 一级", "原始离盘 T+3 / 5 / 8 s；按车速与视线状态分支", "持续光学卡片；请握住方向盘", "继续离盘 8 s 升级，且不超过法规 10 s 上限"],
+  ["HOR 二级", "一级 HOR 后 8 s", "持续光学，并增加持续声学或触觉提示", "持续无响应时最迟 10 s 触发 RMF"],
+  ["EOR 一级", "原始视线脱离 T+3 s，最迟不超过 T+5 s", "持续光学，并附加声学或触觉提示；请注视前方", "继续脱离 3 s 后升级"],
+  ["EOR 二级", "产品路径 T+6 s", "持续光学，声学或触觉提示持续", "持续无响应时最迟 5 s 发出 DCA"],
+  ["手眼组合二级", "原始异常 T+3 s，直接进入二级", "只输出一套组合光学、声学与触觉提醒", "持续无响应 5 s 后进入 DCA"],
+  ["DCA", "EOR 产品路径最迟 T+11 s；疑似失能可直接跳级", "持续光学、声学与触觉警告；请立即接管车辆", "DCA 后目标 5 s、最迟 10 s 触发 RMF"],
+  ["RMF + SOS", "车端最小风险处置与远程救援并行", "持续强警示并播报减速、寻找安全停车位置", "远程连接失败不暂停、不解除车端 RMF"],
 ];
 
 export const ttsRows = [
   ["HOR 一级", "两声短音：120 ms / 声，间隔 120 ms", "请握住方向盘", "同一事件一次；有效操作后解除"],
   ["EOR 一级", "两声短音", "请注视前方", "一次；视线回归 200 ms 后解除"],
   ["手眼组合", "当前最高等级的一套提示音", "请握住方向盘并注视前方", "不分别播 HOR 与 EOR"],
-  ["二级强提醒", "三次强音：350 ms / 次，间隔 200 ms；振动两次", "请立即接管车辆", "约 2 s 一周期"],
+  ["升级 HOR / EOR", "三次强音：350 ms / 次，间隔 200 ms；振动两次", "请立即接管车辆", "保持到驾驶员恢复或进入下一处置阶段"],
   ["DCA", "高频三连短促后接低频三连短促；叠加连续触觉", "请立即接管车辆，车辆即将减速", "最多每 5 s 重播"],
   ["RMF 启动", "持续强警示音", "驾驶员长时间未响应，车辆正在减速并寻找安全停车位置", "状态变化时播报"],
   ["安全停车", "停止强警示，保留低强度状态音", "车辆已安全停车，正在联系紧急救援", "停车后一次"],
@@ -644,11 +617,11 @@ export const ttsRows = [
 ];
 
 export const hmiStates = [
-  { id: "hor-1", code: "HOR", level: "一级", title: "请握住方向盘", detail: "检测到双手离盘", timing: "黄色小卡片 · 两声短音 · 不振动", image: "/assets/dms/hmi/level-1@2x.png", tone: 1, icon: "steering", theme: "level-one" },
-  { id: "hor-2", code: "HOR", level: "二级", title: "请立即接管车辆", detail: "双手离盘持续，升级强提醒", timing: "橙红固定卡片 · 三次强音 · 两次触觉", image: "/assets/dms/hmi/level-2@2x.png", tone: 2, icon: "steering", theme: "level-two" },
-  { id: "eor-1", code: "EOR", level: "一级", title: "请注视前方", detail: "视线离开驾驶任务相关区域", timing: "黄色小卡片 · 两声短音 · 不振动", image: "/assets/dms/hmi/level-1@2x.png", tone: 1, icon: "eye", theme: "level-one" },
-  { id: "eor-2", code: "EOR", level: "二级", title: "请立即接管车辆", detail: "视线持续脱离", timing: "橙红固定卡片 · 三次强音 · 两次触觉", image: "/assets/dms/hmi/level-2@2x.png", tone: 2, icon: "eye", theme: "level-two" },
-  { id: "both-2", code: "HOR × EOR", level: "二级", title: "请握住方向盘并注视前方", detail: "手眼同时脱离，只输出一套组合提醒", timing: "沿用当前最高等级 · 避免重复播报", image: "/assets/dms/hmi/level-2@2x.png", tone: 2, icon: "both", theme: "level-two" },
+  { id: "hor-1", code: "HOR", level: "一级", title: "请握住方向盘", detail: "T+3 / 5 / 8 s，按车速与视线状态", timing: "持续黄色光学卡片 · 分支阈值", image: "/assets/dms/hmi/level-1@2x.png", tone: 1, icon: "steering", theme: "level-one" },
+  { id: "hor-2", code: "HOR", level: "二级", title: "请立即接管车辆", detail: "一级 HOR 后 8 s", timing: "橙红固定卡片 · 最迟不超过 10 s", image: "/assets/dms/hmi/level-2@2x.png", tone: 2, icon: "steering", theme: "level-two" },
+  { id: "eor-1", code: "EOR", level: "一级", title: "请注视前方", detail: "视线脱离 T+3 s", timing: "黄色光学卡片 · 最迟不超过 T+5 s", image: "/assets/dms/hmi/level-1@2x.png", tone: 1, icon: "eye", theme: "level-one" },
+  { id: "eor-2", code: "EOR", level: "二级", title: "请立即接管车辆", detail: "T+6 s，一级 EOR 后 3 s", timing: "橙红固定卡片 · 声学或触觉持续", image: "/assets/dms/hmi/level-2@2x.png", tone: 2, icon: "eye", theme: "level-two" },
+  { id: "both-2", code: "HOR × EOR", level: "二级", title: "请握住方向盘并注视前方", detail: "原始异常 T+3 s，直接二级", timing: "只输出一套合并提醒 · 避免重叠", image: "/assets/dms/hmi/level-2@2x.png", tone: 2, icon: "both", theme: "level-two" },
   { id: "dca-3", code: "DCA", level: "三级", title: "请立即接管车辆", detail: "车辆即将减速", timing: "持续红色卡片 · 三连急促告警 · 连续触觉", image: "/assets/dms/hmi/level-3@2x.png", tone: 3, icon: "warning", theme: "level-three" },
   { id: "rmf-3", code: "RMF", level: "安全介入", title: "车辆正在减速", detail: "正在寻找安全停车位置", timing: "持续强警示 · 状态变化时播报", image: "/assets/dms/hmi/level-3@2x.png", tone: 3, icon: "car", theme: "level-three" },
   { id: "sos", code: "SOS", level: "远程救援", title: "正在连接远程救援坐席", detail: "车端 RMF 继续执行", timing: "一次确认音 · 连接失败保持重试", image: "/assets/dms/hmi/level-3@2x.png", tone: 2, icon: "sos", theme: "sos" },
@@ -672,9 +645,9 @@ export const qualityRules = [
 
 export const acceptanceRows = [
   ["AT-01 启用条件", "断开安全带、DMS、AEB、记录和关键提醒设备", "每项失败均拒绝启用或明确降级，并提示具体原因"],
-  ["AT-02 手部离盘", "注入握持、扭矩并完成离盘 / 重新握盘", "HOR 与升级不超时；有效操作后解除"],
-  ["AT-03 视线脱离", "覆盖前视、仪表、后视镜、中控、夜间和眼镜", "有效区域不误报；EOR、升级和 DCA 符合时限"],
-  ["AT-04 组合 / 失能", "模拟手眼脱离、长闭眼、头部下垂和无操作", "组合提示不重叠；高置信疑似失能能够跳级"],
+  ["AT-02 手部离盘", "按车速、视线可信度注入离盘与重新握盘", "一级 HOR 分别在 T+3 / 5 / 8 s 触发；一级后 8 s 升级且不超过 10 s；有效握盘 1 s 后解除"],
+  ["AT-03 视线脱离", "覆盖前视、仪表、后视镜、中控、夜间和眼镜", "有效区域不误报；T+3 s EOR、T+6 s 升级、最迟 T+11 s DCA；回归 200 ms 后解除"],
+  ["AT-04 组合 / 失能", "模拟手眼脱离、长闭眼、头部下垂和无操作", "组合异常 T+3 s 直接二级、持续 5 s 无响应进入 DCA；疑似失能可直接三级；HMI 不重叠"],
   ["AT-05 RMF", "覆盖高速、城市、乡村和有 / 无安全区", "停车策略正确；断网不中断；不继续原行程"],
   ["AT-06 SOS / 回放", "模拟连接失败、救援受理并导出事件", "工单不重复，权限正确，事件可完整回放"],
 ];
@@ -694,11 +667,22 @@ export const eventFields = [
 ];
 
 export const appendix = [
-  { title: "初始阈值与状态优先级", body: "辅助驾驶开启且车速大于 10 km/h 后进入监测。2 s 是产品侧异常确认初值，不是法规提醒上限。视线脱离在第 3 s 触发一级 EOR，且不晚于 UN R171 规定的第 5 s；手部离盘默认第 5 s 触发 HOR，只有持续确认视线有效时才采用第 8 s，80 km/h 以上前移至第 3 s。状态优先级为：疑似失能 > 疲劳/疑似睡着 > 手眼同时脱离 > 单一脱离 > 正常。监测不可用作为独立故障状态处理。" },
+  { title: "初始阈值与状态优先级", body: "辅助驾驶激活且车速大于 10 km/h 时持续进行手部与视线脱离检测。手部和视线均连续异常 2 s 后确认，但各阶段从原始异常时刻计时。HOR 一级按风险在 T+3 / 5 / 8 s 触发，一级后 8 s 升级且不得超过 10 s；EOR 一级 T+3 s、二级 T+6 s、DCA 最迟 T+11 s。手眼同时脱离在 T+3 s 直接进入二级。状态优先级为：疑似失能 > 疲劳/疑似睡着 > 手眼同时脱离 > 单一脱离 > 正常；监测不可用作为独立故障状态处理。" },
   { title: "测试与验收", body: "P0 安全缺陷为 0；高严重度误触发不高于 1 次/1000 万公里，漏触发不高于 2 次/1000 万公里；受控场地 RMF 安全停车成功率不低于 99.9%；有网络条件下 SOS 成功率不低于 99.5%。人因测试覆盖年龄、身高、眼镜、姿态、光照与噪声。" },
   { title: "远程权限与事件字段", body: "车端上报事件类型、最小必要车辆状态、DMS 结论、告警阶段、DCA/RMF 状态、网络状态与时间戳。远程坐席可评估、联系紧急联系人并发起救援；远程链路不得解除或中断本地安全处置。" },
   { title: "TTS 与 HMI 矩阵", body: "一级为黄色小卡片，可使用一次性双短音；二级为橙红固定卡片，三次增强提示音并配合两次方向盘或座椅振动；三级为持续红色卡片和连续触觉提醒。声音先于 TTS 约 200–300 ms，导航播报暂停、媒体音量降低。" },
-  { title: "法规与工程约束", body: "系统以本地安全闭环为前提，支持离线运行、故障降级、统一时钟、最小化数据上传和可审计日志。图像与音频优先端侧处理，远程仅获取完成安全评估和救援所需的最小信息。" },
+  {
+    title: "法规条款与工程约束",
+    body: "本页以 GB 47955—2026《智能网联汽车 组合驾驶辅助系统安全要求》为法规基准，并结合本 PRD 的产品阈值形成统一时序。法规规定最迟触发边界，产品阈值不得晚于该边界。",
+    clauses: [
+      { code: "4.8.1.2.2", text: "驾驶员在位并系好安全带、驾驶员脱离检测可用、未发生影响安全的失效、未超出 ODD、数据记录可用且 AEB 开启后，组合驾驶辅助才允许激活。" },
+      { code: "4.8.3.1.1.1 / 4.8.3.1.2 / 4.8.3.1.3.1", text: "系统激活且车速大于 10 km/h 时，持续进行手部与视线脱离检测；两项检测不得关闭。视线检测不可用时，非车道巡航控制不得使车辆离开本车道。" },
+      { code: "4.8.3.2.1.1～4.8.3.2.1.4", text: "双手离盘后最迟 5 s 发出 HOR；仅在持续确认视线有效时可放宽至最迟 10 s。继续离盘时，HOR 发出后最迟 10 s 升级，并保持到驾驶员重新握盘。" },
+      { code: "4.8.3.2.2.1～4.8.3.2.2.4", text: "视线脱离后最迟 5 s 发出 EOR；继续脱离时，EOR 发出后最迟 3 s 升级。视线回归驾驶任务相关区域并保持至少 200 ms 后解除。" },
+      { code: "4.8.3.2.3.1～4.8.3.2.3.3", text: "升级 EOR 后继续脱离，最迟 5 s 发出 DCA；DCA 至少包含持续光学、声学和触觉警告，并保持到驾驶员恢复横向控制或触发 RMF。" },
+      { code: "4.8.3.2.4～4.8.3.2.5", text: "升级 HOR 或 DCA 后最迟 10 s 触发 RMF；系统可跳过阶段直接发出，也可按当前最高风险抑制较低等级的重复 HOR / EOR。" },
+    ],
+  },
 ];
 
 export const chapterGroups = [
