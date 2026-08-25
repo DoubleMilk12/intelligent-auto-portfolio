@@ -66,7 +66,7 @@ const hmiIconMap = {
   sos: PhoneCall,
 };
 
-const escalationIconList = [SteeringWheel, Eye, EyeSlash, SpeakerHigh, WarningOctagon, Car];
+const escalationIconList = [SteeringWheel, Eye, EyeSlash, SpeakerHigh, WarningOctagon, Car, PhoneCall];
 
 const scenarioSceneMap = {
   hands: "/assets/dms/simulator/hands-off.png",
