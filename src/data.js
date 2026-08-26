@@ -617,14 +617,14 @@ export const ttsRows = [
 ];
 
 export const hmiStates = [
-  { id: "hor-1", code: "HOR", level: "一级", title: "请握住方向盘", detail: "T+3 / 5 / 8 s，按车速与视线状态", timing: "持续黄色光学卡片 · 分支阈值", image: "/assets/dms/hmi/level-1@2x.png", tone: 1, icon: "steering", theme: "level-one" },
-  { id: "hor-2", code: "HOR", level: "二级", title: "请立即接管车辆", detail: "一级 HOR 后 8 s", timing: "橙红固定卡片 · 最迟不超过 10 s", image: "/assets/dms/hmi/level-2@2x.png", tone: 2, icon: "steering", theme: "level-two" },
-  { id: "eor-1", code: "EOR", level: "一级", title: "请注视前方", detail: "视线脱离 T+3 s", timing: "黄色光学卡片 · 最迟不超过 T+5 s", image: "/assets/dms/hmi/level-1@2x.png", tone: 1, icon: "eye", theme: "level-one" },
-  { id: "eor-2", code: "EOR", level: "二级", title: "请立即接管车辆", detail: "T+6 s，一级 EOR 后 3 s", timing: "橙红固定卡片 · 声学或触觉持续", image: "/assets/dms/hmi/level-2@2x.png", tone: 2, icon: "eye", theme: "level-two" },
-  { id: "both-2", code: "HOR × EOR", level: "二级", title: "请握住方向盘并注视前方", detail: "原始异常 T+3 s，直接二级", timing: "只输出一套合并提醒 · 避免重叠", image: "/assets/dms/hmi/level-2@2x.png", tone: 2, icon: "both", theme: "level-two" },
-  { id: "dca-3", code: "DCA", level: "三级", title: "请立即接管车辆", detail: "车辆即将减速", timing: "持续红色卡片 · 三连急促告警 · 连续触觉", image: "/assets/dms/hmi/level-3@2x.png", tone: 3, icon: "warning", theme: "level-three" },
-  { id: "rmf-3", code: "RMF", level: "安全介入", title: "车辆正在减速", detail: "正在寻找安全停车位置", timing: "持续强警示 · 状态变化时播报", image: "/assets/dms/hmi/level-3@2x.png", tone: 3, icon: "car", theme: "level-three" },
-  { id: "sos", code: "SOS", level: "远程救援", title: "正在连接远程救援坐席", detail: "车端 RMF 继续执行", timing: "一次确认音 · 连接失败保持重试", image: "/assets/dms/hmi/level-3@2x.png", tone: 2, icon: "sos", theme: "sos" },
+  { id: "hor-1", code: "HOR", level: "一级", title: "请握住方向盘", detail: "", timing: "黄色局部提醒卡片", image: "/assets/dms/hmi/dca-navigation-v3.png", tone: 1, icon: "steering", theme: "level-one" },
+  { id: "hor-2", code: "HOR", level: "二级", title: "请立即接管车辆", detail: "", timing: "橙红增强提醒卡片", image: "/assets/dms/hmi/dca-navigation-v3.png", tone: 2, icon: "steering", theme: "level-two" },
+  { id: "eor-1", code: "EOR", level: "一级", title: "请注视前方", detail: "", timing: "黄色局部提醒卡片", image: "/assets/dms/hmi/dca-navigation-v3.png", tone: 1, icon: "eye", theme: "level-one" },
+  { id: "eor-2", code: "EOR", level: "二级", title: "请立即接管车辆", detail: "", timing: "橙红增强提醒卡片", image: "/assets/dms/hmi/dca-navigation-v3.png", tone: 2, icon: "eye", theme: "level-two" },
+  { id: "both-2", code: "HOR × EOR", level: "二级", title: "请握住方向盘并注视前方", detail: "", timing: "橙红组合提醒卡片", image: "/assets/dms/hmi/dca-navigation-v3.png", tone: 2, icon: "both", theme: "level-two" },
+  { id: "dca-3", code: "DCA", level: "三级", title: "请立即接管车辆", detail: "系统开始受控减速", timing: "持续红色卡片 · 三连急促告警 · 连续触觉", image: "/assets/dms/hmi/dca-navigation-v3.png", tone: 3, icon: "warning", theme: "level-three" },
+  { id: "rmf-3", code: "RMF", level: "安全介入", title: "正在驶向安全停车区", detail: "车辆沿规划路线靠边停车", timing: "持续状态播报 · 安全区域与停车路径同步显示", image: "/assets/dms/hmi/rmf-safe-stop-v3.png", tone: 3, icon: "car", theme: "rmf" },
+  { id: "sos", code: "SOS", level: "远程救援", title: "正在连接远程救援坐席", detail: "车辆已停入安全区，双闪已开启", timing: "一次确认音 · 连接失败自动重试", image: "/assets/dms/hmi/sos-rescue-v3.png", tone: 2, icon: "sos", theme: "sos" },
 ];
 
 export const systemLayers = [

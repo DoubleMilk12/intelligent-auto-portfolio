@@ -664,7 +664,7 @@ td { line-height: 1.55; opacity: .76; }
 .hmi-visualizer { margin-top: 76px; }
 .hmi-state-picker { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
 .hmi-state-picker button { --alert-color: var(--teal); min-height: 82px; display: flex; align-items: center; gap: 13px; padding: 14px 17px; border: 1px solid rgba(255,255,255,.16); border-radius: 18px; background: #091713; color: rgba(255,255,255,.78); cursor: pointer; text-align: left; transition: transform .35s var(--ease), border-color .35s var(--ease), background .35s var(--ease); }
-.hmi-state-picker button.level-one { --alert-color: #efc950; }.hmi-state-picker button.level-two { --alert-color: #ef7b4f; }.hmi-state-picker button.level-three { --alert-color: #f0524a; }.hmi-state-picker button.sos { --alert-color: #62b6ae; }
+.hmi-state-picker button.level-one { --alert-color: #efc950; }.hmi-state-picker button.level-two { --alert-color: #ef7b4f; }.hmi-state-picker button.level-three { --alert-color: #f0524a; }.hmi-state-picker button.rmf, .hmi-state-picker button.sos { --alert-color: #62b6ae; }
 .hmi-state-picker button:hover, .hmi-state-picker button:focus-visible { transform: translateY(-4px); border-color: var(--alert-color); }
 .hmi-state-picker button.active { border-color: var(--alert-color); background: #030a08; box-shadow: inset 0 -2px 0 var(--alert-color); color: #fff; }
 .hmi-state-picker button > svg { flex: 0 0 auto; color: var(--alert-color); }
@@ -672,10 +672,52 @@ td { line-height: 1.55; opacity: .76; }
 .hmi-state-picker button b { font-size: 15px; font-weight: 500; letter-spacing: .03em; }
 .hmi-state-picker button small { font-size: 13px; color: rgba(255,255,255,.68); }
 .hmi-preview-layout { display: grid; grid-template-columns: minmax(0,7fr) minmax(300px,4fr); gap: 16px; margin-top: 16px; }
-.hmi-screen-preview { --alert-color: var(--teal); position: relative; min-width: 0; overflow: hidden; border: 1px solid rgba(255,255,255,.14); border-radius: 24px; background: #040a0d; }
-.hmi-screen-preview.level-one { --alert-color: #efc950; }.hmi-screen-preview.level-two { --alert-color: #ef7b4f; }.hmi-screen-preview.level-three { --alert-color: #f0524a; }.hmi-screen-preview.sos { --alert-color: #62b6ae; }
-.hmi-screen-preview > img { width: 100%; height: 100%; max-height: 720px; object-fit: cover; object-position: center; image-rendering: auto; filter: contrast(1.035) saturate(1.025); }
-.hmi-screen-alert { position: absolute; z-index: 2; left: 8%; right: 8%; bottom: 13%; min-height: 92px; display: grid; grid-template-columns: 56px 1fr auto; gap: 16px; align-items: center; padding: 16px 20px; border: 1px solid var(--alert-color); border-radius: 22px; background: #020709; box-shadow: 0 18px 50px rgba(0,0,0,.35), inset 0 0 0 1px color-mix(in srgb, var(--alert-color) 28%, transparent); color: #fff; }
+.hmi-screen-preview { --alert-color: var(--teal); position: relative; min-width: 0; height: clamp(620px,68vw,760px); overflow: hidden; border: 1px solid rgba(255,255,255,.14); border-radius: 24px; background: #040a0d; isolation: isolate; }
+.hmi-screen-preview.level-one { --alert-color: #efc950; }.hmi-screen-preview.level-two { --alert-color: #ef7b4f; }.hmi-screen-preview.level-three { --alert-color: #f0524a; }.hmi-screen-preview.rmf, .hmi-screen-preview.sos { --alert-color: #62b6ae; }
+.hmi-screen-preview > img { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; max-height: none; object-fit: cover; object-position: center; image-rendering: auto; filter: contrast(1.045) saturate(1.04); }
+.hmi-screen-preview::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg,rgba(1,8,12,.12) 0%,transparent 36%,rgba(1,7,10,.22) 74%,rgba(1,7,10,.72) 100%); }
+.hmi-screen-alert { position: absolute; z-index: 7; left: 28px; right: 28px; bottom: 74px; min-height: 88px; display: grid; grid-template-columns: 56px 1fr auto; gap: 16px; align-items: center; padding: 16px 20px; border: 1px solid var(--alert-color); border-radius: 22px; background: rgba(2,9,12,.94); backdrop-filter: blur(18px); box-shadow: 0 18px 50px rgba(0,0,0,.35), inset 0 0 0 1px color-mix(in srgb, var(--alert-color) 28%, transparent); color: #fff; }
+.hmi-top-status { position: absolute; z-index: 8; top: 0; right: 0; left: 0; height: 50px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 18px; border-bottom: 1px solid rgba(255,255,255,.1); background: rgba(2,8,11,.94); backdrop-filter: blur(18px); color: rgba(255,255,255,.8); }
+.hmi-status-left, .hmi-status-right { min-width: 0; display: flex; align-items: center; gap: 10px; }
+.hmi-status-right { justify-content: flex-end; }
+.hmi-top-status span { display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-size: 11px; white-space: nowrap; }
+.hmi-top-status b { font-size: 12px; font-weight: 500; color: #fff; }
+.hmi-driver-profile { width: 28px; height: 28px; border: 1px solid rgba(133,207,199,.4); border-radius: 50%; background: rgba(98,182,174,.14); color: #8ed3cb; }
+.hmi-gear { gap: 3px !important; padding: 5px 8px; border: 1px solid rgba(255,255,255,.16); border-radius: 999px; background: rgba(255,255,255,.05); }
+.hmi-gear i { font-style: normal; opacity: .46; }
+.hmi-gear i.active { color: #fff; opacity: 1; }
+.hmi-range { padding-right: 10px; border-right: 1px solid rgba(255,255,255,.14); }
+.hmi-system-ready { color: #6fd6a2; }
+.hmi-system-ready b { color: currentColor; font-size: 9px; letter-spacing: .08em; }
+.hmi-assistant-chip { padding: 6px 9px; border: 1px solid rgba(139,138,221,.28); border-radius: 999px; background: rgba(76,74,148,.18); }
+.hmi-global-map { position: absolute; z-index: 5; top: 66px; left: 18px; width: clamp(178px,30%,214px); aspect-ratio: 1; overflow: hidden; border: 1px solid rgba(255,255,255,.22); border-radius: 18px; background: #111824; box-shadow: 0 18px 46px rgba(0,0,0,.32); color: #fff; }
+.hmi-global-map > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.hmi-global-map::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg,rgba(1,6,12,.62),transparent 35%,transparent 58%,rgba(1,6,12,.88)); }
+.hmi-global-map-head { position: absolute; z-index: 2; top: 0; right: 0; left: 0; min-height: 46px; display: grid; gap: 2px; padding: 9px 11px; background: rgba(3,8,16,.58); backdrop-filter: blur(9px); }
+.hmi-global-map-head span { display: flex; align-items: center; gap: 6px; color: #95ddd5; font-size: 9px; letter-spacing: .08em; }
+.hmi-global-map-head b { overflow: hidden; font-size: 11px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.hmi-global-map-summary { position: absolute; z-index: 2; right: 0; bottom: 0; left: 0; display: grid; gap: 5px; padding: 11px; background: rgba(2,8,14,.76); backdrop-filter: blur(10px); }
+.hmi-global-map-summary strong { overflow: hidden; font-size: 11px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.hmi-global-map-summary span { display: flex; align-items: center; gap: 7px; color: rgba(255,255,255,.68); font-size: 9px; }
+.hmi-global-map-summary i { width: 3px; height: 3px; border-radius: 50%; background: var(--alert-color); }
+.hmi-drive-status { position: absolute; z-index: 5; top: 70px; left: calc(clamp(178px,30%,214px) + 34px); width: 118px; min-height: 106px; display: grid; grid-template-columns: 36px 1fr; grid-template-rows: 1fr auto; align-items: center; gap: 5px 9px; padding: 12px; border: 1px solid rgba(255,255,255,.18); border-radius: 17px; background: rgba(2,10,14,.78); backdrop-filter: blur(15px); color: #fff; box-shadow: 0 14px 38px rgba(0,0,0,.24); }
+.hmi-speed-limit { width: 34px; height: 34px; display: grid; place-items: center; border: 2px solid #ef4d4a; border-radius: 50%; font-size: 12px; }
+.hmi-current-speed { display: grid; line-height: 1; }
+.hmi-current-speed b { font-size: 33px; font-weight: 350; letter-spacing: -.04em; }
+.hmi-current-speed small { margin-top: 4px; font-size: 8px; color: rgba(255,255,255,.58); }
+.hmi-assist-mode { grid-column: 1 / -1; justify-self: start; padding: 4px 8px; border: 1px solid color-mix(in srgb,var(--alert-color) 58%,transparent); border-radius: 999px; color: var(--alert-color); font-size: 9px; letter-spacing: .08em; }
+.hmi-safety-rail { position: absolute; z-index: 5; top: 66px; right: 18px; width: min(205px,31%); margin: 0; padding: 7px; list-style: none; display: grid; gap: 3px; border: 1px solid rgba(255,255,255,.16); border-radius: 18px; background: rgba(2,10,14,.84); backdrop-filter: blur(18px); box-shadow: 0 14px 40px rgba(0,0,0,.24); }
+.hmi-safety-rail li { min-width: 0; display: grid; grid-template-columns: 30px 1fr; align-items: center; gap: 9px; padding: 10px; border-radius: 12px; color: rgba(255,255,255,.46); }
+.hmi-safety-rail li > span { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.16); border-radius: 50%; font-size: 10px; }
+.hmi-safety-rail li b { min-width: 0; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.hmi-safety-rail li.completed { color: rgba(255,255,255,.7); }
+.hmi-safety-rail li.completed > span { border-color: rgba(98,182,174,.58); color: #8ed3cb; }
+.hmi-safety-rail li.active { background: color-mix(in srgb,var(--alert-color) 16%,transparent); color: #fff; }
+.hmi-safety-rail li.active > span { border-color: var(--alert-color); background: var(--alert-color); color: #07130f; }
+.hmi-screen-footer { position: absolute; z-index: 8; right: 0; bottom: 0; left: 0; height: 56px; display: flex; align-items: center; justify-content: space-around; gap: 4px; padding: 0 12px; border-top: 1px solid rgba(255,255,255,.13); background: rgba(2,8,11,.94); backdrop-filter: blur(18px); color: rgba(255,255,255,.55); }
+.hmi-screen-footer span { min-width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; }
+.hmi-screen-footer span.active { background: color-mix(in srgb,var(--alert-color) 18%,transparent); color: var(--alert-color); }
+.hmi-screen-footer .hmi-temperature { width: auto; min-width: 48px; font-size: 12px; color: rgba(255,255,255,.82); }
 .hmi-alert-icon { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 16px; background: color-mix(in srgb, var(--alert-color) 15%, transparent); color: var(--alert-color); }
 .hmi-alert-copy { display: grid; gap: 6px; }
 .hmi-alert-copy b { font-size: clamp(18px,2.1vw,30px); font-weight: 400; letter-spacing: -.02em; }
@@ -1362,11 +1404,26 @@ footer button { display: flex; gap: 10px; align-items: center; margin-top: 35px;
   .hmi-state-picker { gap: 7px; }
   .hmi-state-picker button { min-height: 66px; padding: 10px 12px; border-radius: 15px; }
   .hmi-screen-preview { border-radius: 18px; }
-  .hmi-screen-alert { left: 5%; right: 5%; bottom: 13%; min-height: 70px; grid-template-columns: 42px 1fr; gap: 10px; padding: 10px 12px; border-radius: 16px; }
+  .hmi-screen-alert { left: 12px; right: 12px; bottom: 66px; min-height: 70px; grid-template-columns: 42px 1fr; gap: 10px; padding: 10px 12px; border-radius: 16px; }
+  .hmi-top-status { height: 44px; gap: 8px; padding: 0 10px; }
+  .hmi-status-left, .hmi-status-right { gap: 6px; }
+  .hmi-assistant-chip, .hmi-system-ready, .hmi-status-right > span:nth-child(3) { display: none !important; }
+  .hmi-range { padding-right: 0; border-right: 0; }
+  .hmi-global-map { top: 56px; left: 12px; width: 164px; border-radius: 15px; }
+  .hmi-global-map-head { min-height: 40px; padding: 7px 9px; }
+  .hmi-global-map-summary { padding: 9px; }
+  .hmi-drive-status { top: 58px; right: 12px; left: auto; width: 116px; min-height: 96px; padding: 10px; border-radius: 15px; }
+  .hmi-safety-rail { top: 232px; right: 12px; left: 12px; width: auto; grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .hmi-safety-rail li { grid-template-columns: 24px 1fr; gap: 6px; padding: 7px; }
+  .hmi-safety-rail li > span { width: 24px; height: 24px; }
+  .hmi-safety-rail li b { font-size: 10px; }
   .hmi-alert-icon { width: 40px; height: 40px; border-radius: 12px; }
   .hmi-alert-copy b { font-size: 16px; }
   .hmi-alert-copy small { font-size: 11px; }
   .sound-meter { display: none; }
+  .hmi-screen-footer { padding: 0 4px; }
+  .hmi-screen-footer span { min-width: 30px; }
+  .hmi-screen-footer .hmi-temperature { min-width: 42px; }
   .hmi-preview-copy { padding: 24px; border-radius: 18px; }
   .hmi-preview-copy h3 { margin-top: 34px; }
   .hmi-preview-copy dl { margin-top: 32px; }

@@ -22,6 +22,8 @@ import {
   EyeSlash,
   Gauge,
   HandPalm,
+  Headlights,
+  House,
   List,
   MagnifyingGlassPlus,
   Minus,
@@ -35,8 +37,11 @@ import {
   Scan,
   ShieldCheck,
   SpeakerHigh,
+  SquaresFour,
   SteeringWheel,
+  Thermometer,
   Tree,
+  VideoCamera,
   Warning,
   WarningOctagon,
   X,
@@ -978,7 +983,24 @@ function HmiVisualizer() {
   const timerRef = useRef(null);
   const activeState = hmiStates.find((item) => item.id === activeId) || hmiStates[0];
   const ActiveIcon = hmiIconMap[activeState.icon] || Warning;
-  const imageAlreadyContainsAlert = ["dca-3", "rmf-3", "sos"].includes(activeState.id);
+  const safetyStageIndex = { "dca-3": 0, "rmf-3": 1, sos: 2 };
+  const safetyNavigation = Object.prototype.hasOwnProperty.call(safetyStageIndex, activeState.id);
+  const activeSafetyStage = safetyStageIndex[activeState.id] ?? 0;
+  const safetyStages = [
+    { id: "dca-3", code: "01", label: "受控减速" },
+    { id: "rmf-3", code: "02", label: "驶向安全区" },
+    { id: "sos", code: "03", label: "远程救援" },
+  ];
+  const mapStatus = {
+    "hor-1": { speed: "82", limit: "80", route: "G15 沈海高速", instruction: "前方 12.6 km 直行", distance: "12.6 km", eta: "18 min", assist: "HAD" },
+    "hor-2": { speed: "82", limit: "80", route: "G15 沈海高速", instruction: "前方 12.6 km 直行", distance: "12.6 km", eta: "18 min", assist: "HAD" },
+    "eor-1": { speed: "82", limit: "80", route: "G15 沈海高速", instruction: "前方 12.6 km 直行", distance: "12.6 km", eta: "18 min", assist: "HAD" },
+    "eor-2": { speed: "82", limit: "80", route: "G15 沈海高速", instruction: "前方 12.6 km 直行", distance: "12.6 km", eta: "18 min", assist: "HAD" },
+    "both-2": { speed: "82", limit: "80", route: "G15 沈海高速", instruction: "前方 12.6 km 直行", distance: "12.6 km", eta: "18 min", assist: "HAD" },
+    "dca-3": { speed: "72", limit: "80", route: "G15 沈海高速", instruction: "保持车道并受控减速", distance: "安全区 1.2 km", eta: "约 2 min", assist: "DCA" },
+    "rmf-3": { speed: "32", limit: "60", route: "安全停车路线", instruction: "前方 280 m 进入安全区", distance: "280 m", eta: "约 1 min", assist: "RMF" },
+    sos: { speed: "0", limit: "60", route: "已停靠安全区", instruction: "双闪已开启，等待远程救援", distance: "0 m", eta: "救援连接中", assist: "P" },
+  }[activeState.id];
 
   useEffect(() => () => window.clearTimeout(timerRef.current), []);
 
@@ -1003,13 +1025,55 @@ function HmiVisualizer() {
           <AnimatePresence mode="wait">
             <motion.img key={activeState.id} src={activeState.image} alt={`${activeState.code} ${activeState.level}车机显示示意`} initial={{ opacity: 0.25 }} animate={{ opacity: 1 }} exit={{ opacity: 0.25 }} transition={{ duration: 0.35, ease }} />
           </AnimatePresence>
-          {!imageAlreadyContainsAlert && (
-            <motion.div key={`${activeState.id}-alert`} className="hmi-screen-alert" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease }}>
-              <span className="hmi-alert-icon"><ActiveIcon size={28} weight="duotone" /></span>
-              <span className="hmi-alert-copy"><b>{activeState.title}</b><small>{activeState.detail}</small></span>
-              <span className="sound-meter" aria-hidden="true">{[0, 1, 2, 3, 4].map((bar) => <i key={bar} />)}</span>
-            </motion.div>
+          <div className="hmi-top-status" aria-label="车辆顶部状态栏">
+            <div className="hmi-status-left">
+              <span className="hmi-driver-profile"><Scan size={16} /></span>
+              <span className="hmi-gear"><i>P</i><i>R</i><i>N</i><i className="active">D</i></span>
+              <span className="hmi-range"><Car size={15} />568 km</span>
+              <span className="hmi-system-ready"><Headlights size={17} /><b>READY</b></span>
+            </div>
+            <div className="hmi-status-right">
+              <span className="hmi-assistant-chip"><ChatsCircle size={15} />智能助手</span>
+              <span><VideoCamera size={16} /></span><span><Broadcast size={16} /></span><b>5G</b><span><Thermometer size={16} />18°</span><b>18:10</b>
+            </div>
+          </div>
+          <motion.div className="hmi-global-map" key={`${activeState.id}-map`} initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease }}>
+            <div className="hmi-global-map-head"><span><NavigationArrow size={15} weight="fill" />全局导航</span><b>{mapStatus.route}</b></div>
+            <img src="/assets/dms/hmi/global-map-reference.png" alt="包含城市路网、规划路线与车辆定位箭头的全局导航地图" />
+            <div className="hmi-global-map-summary"><strong>{mapStatus.instruction}</strong><span>{mapStatus.distance}<i />{mapStatus.eta}</span></div>
+          </motion.div>
+          <motion.div className="hmi-drive-status" key={`${activeState.id}-drive`} initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease, delay: 0.06 }} aria-label={`当前车速 ${mapStatus.speed} 千米每小时`}>
+            <span className="hmi-speed-limit">{mapStatus.limit}</span>
+            <span className="hmi-current-speed"><b>{mapStatus.speed}</b><small>km/h</small></span>
+            <span className="hmi-assist-mode">{mapStatus.assist}</span>
+          </motion.div>
+          {safetyNavigation && (
+            <>
+              <motion.ol className="hmi-safety-rail" key={`${activeState.id}-rail`} initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.45, ease }} aria-label="车辆安全处置进度">
+                {safetyStages.map((stage, index) => (
+                  <li key={stage.id} className={`${index === activeSafetyStage ? "active" : ""} ${index < activeSafetyStage ? "completed" : ""}`}>
+                    <span>{index < activeSafetyStage ? <Check size={14} weight="bold" /> : stage.code}</span>
+                    <b>{stage.label}</b>
+                  </li>
+                ))}
+              </motion.ol>
+            </>
           )}
+          <div className="hmi-screen-footer" aria-hidden="true">
+            <span><House size={19} weight="fill" /></span>
+            <span><Car size={20} /></span>
+            <span><ArrowLeft size={18} /></span>
+            <span className="hmi-temperature">23.5°</span>
+            <span><Gauge size={20} /></span>
+            <span className="active"><NavigationArrow size={19} weight="fill" /></span>
+            <span><PhoneCall size={20} /></span>
+            <span><SquaresFour size={20} weight="fill" /></span>
+          </div>
+          <motion.div key={`${activeState.id}-alert`} className="hmi-screen-alert" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease }}>
+            <span className="hmi-alert-icon"><ActiveIcon size={28} weight="duotone" /></span>
+            <span className="hmi-alert-copy"><b>{activeState.title}</b></span>
+            <span className="sound-meter" aria-hidden="true">{[0, 1, 2, 3, 4].map((bar) => <i key={bar} />)}</span>
+          </motion.div>
         </div>
 
         <aside className="hmi-preview-copy">
@@ -1018,7 +1082,7 @@ function HmiVisualizer() {
           <p>{activeState.timing}</p>
           <dl>
             <div><dt>提示形式</dt><dd>{activeState.theme === "level-one" ? "局部小卡片，不遮挡驾驶主信息" : activeState.theme === "level-two" ? "固定增强卡片，持续占位但不扩展全屏" : "持续高优先级卡片，同步车辆处置状态"}</dd></div>
-            <div><dt>驾驶员动作</dt><dd>{activeState.detail}</dd></div>
+            <div><dt>{safetyNavigation ? "车辆状态" : "驾驶员动作"}</dt><dd>{safetyNavigation ? activeState.detail : activeState.title}</dd></div>
           </dl>
           <button className={playing ? "playing" : ""} onClick={() => previewSound()} aria-label={`试听 ${activeState.code} ${activeState.level}提示音`}><SpeakerHigh size={19} />{playing ? "正在播放" : "试听该状态"}<span className="audio-level">音量 {activeState.tone === 1 ? "Ⅰ" : activeState.tone === 2 ? "Ⅱ" : "Ⅲ"}</span></button>
           <small className="sound-disclaimer">{activeState.tone === 3 ? `三级使用${levelThreeTone.name}告警音，并叠加低频与触觉反馈。` : ""}声音只在点击后播放。</small>
