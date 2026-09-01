@@ -1506,17 +1506,26 @@ footer button { display: flex; gap: 10px; align-items: center; margin-top: 35px;
   .robot-official-sources { align-items: flex-start; flex-direction: column; }
   .robot-morph-card { min-height: 520px; padding: 24px; }
   .robot-table-wrap { display: none; }
-  .robot-comparison-mobile, .robot-product-mobile { display: grid; gap: 12px; }
-  .robot-comparison-mobile article, .robot-product-mobile article { padding: 22px; border-radius: 20px; background: #ebe8de; }
+  .robot-comparison-mobile { display: grid; gap: 12px; }
+  .robot-product-mobile { display: block; }
+  .robot-comparison-mobile article, .robot-product-mobile-track article { padding: 22px; border-radius: 20px; background: #ebe8de; }
   .robot-comparison-mobile h3 { margin-bottom: 10px; font-size: 27px; }
   .robot-comparison-mobile article > div { padding: 14px 0; border-top: 1px solid var(--line); }
   .robot-comparison-mobile b { font-size: 12px; color: #315f58; }
   .robot-comparison-mobile p { margin-top: 5px; font-size: 14px; line-height: 1.62; }
   .robot-product-matrix { margin-top: 80px; }
-  .robot-product-mobile article small { color: #315f58; }
-  .robot-product-mobile h4 { margin: 10px 0 18px; font-size: 27px; font-weight: 400; }
-  .robot-product-mobile p { padding: 12px 0; border-top: 1px solid var(--line); font-size: 14px; line-height: 1.62; }
-  .robot-product-mobile p b { display: block; margin-bottom: 4px; font-size: 11.5px; color: #315f58; }
+  .robot-product-mobile-hint { margin: -10px 0 24px; font-size: 12px; color: rgba(29,29,27,.58); }
+  .robot-product-mobile-group + .robot-product-mobile-group { margin-top: 32px; }
+  .robot-product-mobile-group-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .robot-product-mobile-group-heading h4 { margin: 0; font-size: 24px; font-weight: 400; }
+  .robot-product-mobile-group-heading span { font-size: 11px; color: #315f58; }
+  .robot-product-mobile-track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(280px, 84vw); gap: 12px; margin-inline: -16px; padding-inline: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .robot-product-mobile-track::-webkit-scrollbar { display: none; }
+  .robot-product-mobile-track article { min-height: 410px; scroll-snap-align: start; }
+  .robot-product-mobile-track article small { color: #315f58; }
+  .robot-product-mobile-track article h4 { margin: 10px 0 18px; font-size: 27px; font-weight: 400; }
+  .robot-product-mobile-track article > p { padding: 12px 0; border-top: 1px solid var(--line); font-size: 14px; line-height: 1.62; }
+  .robot-product-mobile-track article > p b { display: block; margin-bottom: 4px; font-size: 11.5px; color: #315f58; }
   .robot-conclusion-grid { grid-template-columns: 1fr; }
   .robot-conclusion-card { min-height: 330px; }
   footer { padding-top: 85px; }

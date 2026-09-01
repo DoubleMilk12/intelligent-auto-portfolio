@@ -284,8 +284,23 @@ function ComparisonSection() {
               })}</tbody>
             </table>
           </div>
-          <div className="robot-product-mobile">
-            {robotProducts.map((row) => <article key={`${row[0]}-${row[1]}`}><small>{row[0]} / {row[2]}</small><h4>{robotProductImages[`${row[0]}-${row[1]}`] && <img src={robotProductImages[`${row[0]}-${row[1]}`]} alt={`${row[0]} ${row[1]} 完整本体`} loading="lazy" />}{row[1]}</h4><p><b>结构参数</b>{row[3]}</p><p><b>末端、感知与续航</b>{row[4]}</p><p><b>任务定位</b>{row[5]}</p></article>)}
+          <div className="robot-product-mobile" aria-label="手机端代表机型与结构参数">
+            <p className="robot-product-mobile-hint">按公司分组，左右滑动查看全部型号</p>
+            {robotCompanies.map((company) => {
+              const productCompanyName = company.name.replace(/科技$|机器人$/, "");
+              const companyRows = robotProducts.filter((row) => row[0] === productCompanyName);
+              return (
+                <section className="robot-product-mobile-group" key={company.id} aria-labelledby={`robot-product-mobile-${company.id}`}>
+                  <div className="robot-product-mobile-group-heading">
+                    <h4 id={`robot-product-mobile-${company.id}`}>{company.name}</h4>
+                    <span>{companyRows.length} 款机型</span>
+                  </div>
+                  <div className="robot-product-mobile-track">
+                    {companyRows.map((row) => <article key={`${row[0]}-${row[1]}`}><small>{row[2]}</small><h4>{robotProductImages[`${row[0]}-${row[1]}`] && <img src={robotProductImages[`${row[0]}-${row[1]}`]} alt={`${row[0]} ${row[1]} 完整本体`} loading="lazy" />}{row[1]}</h4><p><b>结构参数</b>{row[3]}</p><p><b>末端、感知与续航</b>{row[4]}</p><p><b>任务定位</b>{row[5]}</p></article>)}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         </RobotReveal>
       </div>
